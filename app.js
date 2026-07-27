@@ -7,7 +7,7 @@ function draw(){
 const stitches = Number(document.getElementById("stitches").value);     
 const perStitch = Number(document.getElementById("perStitch").value);
 const rows = Number(document.getElementById("rows").value);
-const grid = buildGrid(sequence, stitches, rows, perStitch);
+const grid = buildGrid(readSequence(), stitches, rows, perStitch);
 const cellWidth = canvas.width / stitches;     // cell width
 const cellHeight = canvas.height / rows;         // cell height
 drawGrid(grid, cellWidth, cellHeight)};

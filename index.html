@@ -9,6 +9,12 @@
   <h1>Planned Pooling</h1>
 
   <form id="controls">
+    <fieldset>
+      <legend>Yarn colors</legend>
+      <div id="colorRows"></div>
+      <button type="button" id="addColor">+ Add color</button>
+    </fieldset>
+
     <label for="stitches">Stitches per row</label>
     <input type="number" id="stitches" value="140" min="1">
 
@@ -26,6 +32,7 @@
   <script src="yarn.js"></script>
   <script src="construction.js"></script>
   <script src="render.js"></script>
+  <script src="controls.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
