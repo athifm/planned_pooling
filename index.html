@@ -4,34 +4,63 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Planned Pooling</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Planned Pooling</h1>
 
-  <form id="controls">
+  <div class="layout">
+    <div class="dimension top">
+      <label for="stitches">Stitches</label>
+      <input type="number" id="stitches" value="140" min="1"
+             aria-label="Stitches per row">
+    </div>
+
+    <div class="canvasArea">
+      <div id="canvasWrap">
+        <canvas id="fabric"></canvas>
+      </div>
+      <div class="handle handleRight"  id="handleRight"  title="Drag to change stitches"></div>
+      <div class="handle handleBottom" id="handleBottom" title="Drag to change rows"></div>
+      <div class="handle handleCorner" id="handleCorner" title="Drag to change both"></div>
+    </div>
+
+    <div class="dimension right">
+      <label for="rows">Rows</label>
+      <input type="number" id="rows" value="50" min="1"
+             aria-label="Number of rows">
+    </div>
+  </div>
+
+  <p id="readout"></p>
+
+  <div class="panel">
     <fieldset>
       <legend>Yarn colors</legend>
       <div id="colorRows"></div>
       <button type="button" id="addColor">+ Add color</button>
     </fieldset>
 
-    <label for="stitches">Stitches per row</label>
-    <input type="number" id="stitches" value="140" min="1">
+    <fieldset>
+      <legend>Gauge</legend>
+      <label for="stitchWidth">Stitch width (mm)</label>
+      <input type="number" id="stitchWidth" value="4.5" step="0.1" min="0.1">
 
-    <label for="rows">Rows</label>
-    <input type="number" id="rows" value="50" min="1">
+      <label for="rowHeight">Row height (mm)</label>
+      <input type="number" id="rowHeight" value="3.3" step="0.1" min="0.1">
+    </fieldset>
 
-    <label for="perStitch">Yarn per stitch (m)</label>
-    <input type="number" id="perStitch" value="0.05" step="0.01" min="0.001">
-
-    <button type="button" id="drawButton">Draw</button>
-  </form>
-
-  <canvas id="fabric" width="800" height="600"></canvas>
+    <fieldset>
+      <legend>Yarn</legend>
+      <label for="perStitch">Yarn per stitch (m)</label>
+      <input type="number" id="perStitch" value="0.05" step="0.01" min="0.001">
+    </fieldset>
+  </div>
 
   <script src="yarn.js"></script>
   <script src="construction.js"></script>
   <script src="render.js"></script>
+  <script src="geometry.js"></script>
   <script src="controls.js"></script>
   <script src="app.js"></script>
 </body>

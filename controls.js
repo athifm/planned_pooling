@@ -26,6 +26,7 @@ function addColorRow(color, length) {
     // A yarn with no colors makes no sense — always keep one row.
     if (colorRows.children.length > 1) {
       row.remove();
+      draw();   // defined in app.js, which loads after this file
     }
   });
 

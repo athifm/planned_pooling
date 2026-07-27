@@ -1,0 +1,169 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 1rem;
+  color: #222;
+}
+
+h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* The canvas and its two dimension controls.
+   Stitches sits above the canvas because it governs the horizontal
+   dimension; rows sits to the right because it governs the vertical. */
+.layout {
+  display: grid;
+  grid-template-areas:
+    "top     ."
+    "canvas  right";
+  grid-template-columns: auto auto;
+  gap: 0.75rem;
+  justify-content: start;
+  align-items: start;
+  margin-bottom: 1.25rem;
+}
+
+/* Each control is centred on the edge it governs: stitches across the top,
+   rows down the right. Both re-centre automatically as the canvas resizes,
+   because the grid column and row are sized by the canvas itself. */
+.top {
+  grid-area: top;
+  justify-self: center;
+}
+
+.right {
+  grid-area: right;
+  align-self: center;
+}
+
+.dimension label {
+  font-size: 0.85rem;
+  color: #555;
+  margin-right: 0.4rem;
+}
+
+/* The area is only as big as the canvas box; the handles hang off its
+   edges, so they follow the canvas without any positioning maths. */
+.canvasArea {
+  grid-area: canvas;
+  position: relative;
+  width: fit-content;
+}
+
+#canvasWrap {
+  overflow: hidden;
+  border: 1px solid #bbb;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+/* Three grips: right edge changes stitches, bottom edge changes rows,
+   corner changes both. touch-action:none stops a touch drag from
+   scrolling the page instead of resizing. */
+.handle {
+  position: absolute;
+  background: #c4c4c4;
+  border-radius: 2px;
+  touch-action: none;
+}
+
+.handle:hover {
+  background: #8a8a8a;
+}
+
+.handleRight {
+  top: 0;
+  right: -10px;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.handleBottom {
+  left: 0;
+  bottom: -10px;
+  height: 8px;
+  width: 100%;
+  cursor: ns-resize;
+}
+
+.handleCorner {
+  right: -10px;
+  bottom: -10px;
+  width: 8px;
+  height: 8px;
+  background: #8a8a8a;
+  cursor: nwse-resize;
+}
+
+#fabric {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#readout {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.panel {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  max-width: 34rem;
+}
+
+fieldset {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+}
+
+legend {
+  font-size: 0.85rem;
+  color: #555;
+  padding: 0 0.3rem;
+}
+
+label {
+  font-size: 0.9rem;
+}
+
+input[type="number"] {
+  width: 6rem;
+  padding: 0.2rem 0.3rem;
+}
+
+input[type="color"] {
+  width: 3rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 1px solid #bbb;
+}
+
+.colorRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+button {
+  padding: 0.25rem 0.6rem;
+  font: inherit;
+}
+
+/* Narrow screens: stack everything. The drag handle is mouse-only anyway,
+   so on a phone the number boxes are the whole interface. */
+@media (max-width: 640px) {
+  .layout {
+    grid-template-areas:
+      "top"
+      "canvas"
+      "right";
+    grid-template-columns: 1fr;
+  }
+}
