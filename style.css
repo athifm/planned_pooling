@@ -9,6 +9,25 @@ h1 {
   font-weight: 600;
 }
 
+/* Controls on the left, fabric on the right, so entering a value and seeing
+   its effect never involves scrolling. Named areas rather than DOM order,
+   so the fabric can come first on a narrow screen. */
+.page {
+  display: grid;
+  grid-template-areas: "controls fabric";
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.fabricSide {
+  grid-area: fabric;
+  /* The controls column is taller than the fabric, so pin the fabric in
+     view while scrolling through them. */
+  position: sticky;
+  top: 1rem;
+}
+
 /* The canvas and its two dimension controls.
    Stitches sits above the canvas because it governs the horizontal
    dimension; rows sits to the right because it governs the vertical. */
@@ -110,10 +129,10 @@ h1 {
 }
 
 .panel {
-  margin-top: 1.5rem;
+  grid-area: controls;
   display: grid;
   gap: 1rem;
-  max-width: 34rem;
+  align-content: start;
 }
 
 fieldset {
@@ -144,6 +163,46 @@ input[type="color"] {
   border: 1px solid #bbb;
 }
 
+.swatch {
+  margin-top: 0.7rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.6rem;
+}
+
+.swatch summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #345;
+}
+
+/* Label/input pairs in two columns, so nothing wraps mid-pair.
+   max-content sizes each column to its widest item, which keeps every
+   input left-aligned with the others. */
+.fields {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  gap: 0.45rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+/* Four columns, so each measurement sits beside the count it goes with:
+   width with stitches, height with rows. That pairing is the calculation. */
+.fieldsSwatch {
+  grid-template-columns: repeat(4, max-content);
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: #666;
+  margin: 0.4rem 0;
+}
+
+.choice {
+  display: block;
+  margin: 0.2rem 0;
+}
+
 .colorRow {
   display: flex;
   gap: 0.5rem;
@@ -158,6 +217,22 @@ button {
 
 /* Narrow screens: stack everything. The drag handle is mouse-only anyway,
    so on a phone the number boxes are the whole interface. */
+@media (max-width: 900px) {
+  /* Too narrow for two columns: stack, fabric first so it is what you see
+     when the page opens. Sticky is dropped — it would cover the controls. */
+  .page {
+    grid-template-areas:
+      "fabric"
+      "controls";
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .fabricSide {
+    position: static;
+  }
+}
+
 @media (max-width: 640px) {
   .layout {
     grid-template-areas:
@@ -165,5 +240,12 @@ button {
       "canvas"
       "right";
     grid-template-columns: 1fr;
+  }
+
+  /* max-content columns can overrun a narrow screen — stack instead. */
+  .fields,
+  .fieldsSwatch {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
   }
 }

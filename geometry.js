@@ -10,6 +10,16 @@ function fabricSize(stitches, rows, stitchWidth, rowHeight) {
   };
 }
 
+// Gauge from a knitted sample: count the stitches and rows in it, measure how
+// big it came out, and divide. Measurements in centimetres, answer in
+// millimetres, to match the gauge boxes.
+function gaugeFromSwatch(stitches, rows, widthCm, heightCm) {
+  return {
+    stitchWidth: (widthCm * 10) / stitches,
+    rowHeight: (heightCm * 10) / rows,
+  };
+}
+
 // The user dragged the canvas to this pixel size — how many stitches and rows
 // fit in it, given the on-screen size of one cell? Never returns less than 1:
 // a fabric with no stitches would divide by zero further down.

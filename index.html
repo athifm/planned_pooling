@@ -9,9 +9,11 @@
 <body>
   <h1>Planned Pooling</h1>
 
+  <div class="page">
+  <div class="fabricSide">
   <div class="layout">
     <div class="dimension top">
-      <label for="stitches">Stitches</label>
+      <label for="stitches" id="stitchesLabel">Stitches</label>
       <input type="number" id="stitches" value="140" min="1"
              aria-label="Stitches per row">
     </div>
@@ -33,6 +35,7 @@
   </div>
 
   <p id="readout"></p>
+  </div>
 
   <div class="panel">
     <fieldset>
@@ -41,20 +44,57 @@
       <button type="button" id="addColor">+ Add color</button>
     </fieldset>
 
+    <fieldset id="construction">
+      <legend>Construction</legend>
+      <label class="choice">
+        <input type="radio" name="construction" value="flat" checked>
+        Flat — knitted back and forth, every other row reversed
+      </label>
+      <label class="choice">
+        <input type="radio" name="construction" value="circular">
+        Circular — knitted in the round, a continuous spiral
+      </label>
+    </fieldset>
+
     <fieldset>
       <legend>Gauge</legend>
-      <label for="stitchWidth">Stitch width (mm)</label>
-      <input type="number" id="stitchWidth" value="4.5" step="0.1" min="0.1">
+      <div class="fields">
+        <label for="stitchWidth">Stitch width (mm)</label>
+        <input type="number" id="stitchWidth" value="4.5" step="0.1" min="0.1">
 
-      <label for="rowHeight">Row height (mm)</label>
-      <input type="number" id="rowHeight" value="3.3" step="0.1" min="0.1">
+        <label for="rowHeight">Row height (mm)</label>
+        <input type="number" id="rowHeight" value="3.3" step="0.1" min="0.1">
+      </div>
+
+      <details class="swatch">
+        <summary>Work it out from a swatch</summary>
+        <p class="hint">Knit a sample, count what went into it, then measure it.</p>
+
+        <div class="fields fieldsSwatch">
+          <label for="swatchWidth">Measured width (cm)</label>
+          <input type="number" id="swatchWidth" value="10" step="0.1" min="0.1">
+          <label for="swatchStitches">Stitches</label>
+          <input type="number" id="swatchStitches" value="22" min="1">
+
+          <label for="swatchHeight">Measured height (cm)</label>
+          <input type="number" id="swatchHeight" value="10" step="0.1" min="0.1">
+          <label for="swatchRows">Rows</label>
+          <input type="number" id="swatchRows" value="30" min="1">
+        </div>
+
+        <button type="button" id="applySwatch">Use this gauge</button>
+        <p class="hint" id="swatchResult"></p>
+      </details>
     </fieldset>
 
     <fieldset>
       <legend>Yarn</legend>
-      <label for="perStitch">Yarn per stitch (m)</label>
-      <input type="number" id="perStitch" value="0.05" step="0.01" min="0.001">
+      <div class="fields">
+        <label for="perStitch">Yarn per stitch (m)</label>
+        <input type="number" id="perStitch" value="0.05" step="0.01" min="0.001">
+      </div>
     </fieldset>
+  </div>
   </div>
 
   <script src="yarn.js"></script>

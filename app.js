@@ -13,6 +13,12 @@ const stitchWidthInput = document.getElementById("stitchWidth");
 const rowHeightInput   = document.getElementById("rowHeight");
 const readout         = document.getElementById("readout");
 const canvasWrap      = document.getElementById("canvasWrap");
+const constructionSet = document.getElementById("construction");
+const stitchesLabel   = document.getElementById("stitchesLabel");
+
+function isCircular() {
+  return document.querySelector("input[name=construction]:checked").value === "circular";
+}
 
 function num(input) {
   return Number(input.value);
@@ -37,12 +43,27 @@ function draw() {
   if (!Number.isFinite(stitches) || !Number.isFinite(rows)) return;
   if (stitches < 1 || rows < 1) return;
 
-  const grid = buildGrid(readSequence(), stitches, rows, num(perStitchInput));
-  drawGrid(grid, canvas.width / stitches, canvas.height / rows);
+  const circular = isCircular();
 
+  // In the round there is no row end, so the count is stitches per round,
+  // and column 0 is the start of each round — the seam.
+  stitchesLabel.textContent = circular ? "Stitches per round" : "Stitches";
+  stitchesInput.setAttribute(
+    "aria-label", circular ? "Stitches per round" : "Stitches per row"
+  );
+
+  // Unrolled, a tube's seam shows at both edges — they are the same line.
+  const seams = circular ? [0, stitches] : null;
+
+  const grid = buildGrid(readSequence(), stitches, rows, num(perStitchInput), circular);
+  drawGrid(grid, canvas.width / stitches, canvas.height / rows, seams);
+
+  // Knitted in the round the fabric is a tube, so its width measurement is
+  // the way round it, not the way across it.
   const size = fabricSize(stitches, rows, num(stitchWidthInput), num(rowHeightInput));
   readout.textContent =
-    size.widthCm.toFixed(1) + " cm wide, " + size.heightCm.toFixed(1) + " cm tall";
+    size.widthCm.toFixed(1) + (circular ? " cm circumference, " : " cm wide, ") +
+    size.heightCm.toFixed(1) + " cm tall";
 }
 
 // Match the canvas bitmap to the box the user sees. Without this the canvas
@@ -143,6 +164,35 @@ for (const input of [stitchesInput, rowsInput, stitchWidthInput, rowHeightInput]
 }
 
 perStitchInput.addEventListener("change", draw);
+constructionSet.addEventListener("change", draw);
+
+// Gauge from a knitted sample. The millimetre boxes stay the source of truth;
+// this only fills them in, so the arithmetic stays visible rather than hidden.
+const swatchResult = document.getElementById("swatchResult");
+
+document.getElementById("applySwatch").addEventListener("click", function () {
+  const s = num(document.getElementById("swatchStitches"));
+  const r = num(document.getElementById("swatchRows"));
+  const w = num(document.getElementById("swatchWidth"));
+  const h = num(document.getElementById("swatchHeight"));
+
+  if (!(s >= 1) || !(r >= 1) || !(w > 0) || !(h > 0)) {
+    swatchResult.textContent = "Every box needs a number greater than zero.";
+    return;
+  }
+
+  const g = gaugeFromSwatch(s, r, w, h);
+  stitchWidthInput.value = g.stitchWidth.toFixed(2);
+  rowHeightInput.value = g.rowHeight.toFixed(2);
+  swatchResult.textContent =
+    "Gauge set to " + g.stitchWidth.toFixed(2) + " mm per stitch, " +
+    g.rowHeight.toFixed(2) + " mm per row.";
+
+  // Cell size changed, so the canvas box has to change with it.
+  sizeWrapperFromCounts();
+  resizeCanvasToWrapper();
+  draw();
+});
 
 // change bubbles, so one listener on the container covers every color row,
 // including rows added later.
