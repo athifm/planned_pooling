@@ -10,13 +10,33 @@ function fabricSize(stitches, rows, stitchWidth, rowHeight) {
   };
 }
 
+// Yarn lengths can be entered in whatever unit the knitter's ball band or tape
+// measure uses. Everything downstream works in metres, so conversion happens
+// once, at the point the form is read.
+const METRES_PER_UNIT = {
+  m:  1,
+  cm: 0.01,
+  mm: 0.001,
+  ft: 0.3048,
+  yd: 0.9144,
+  in: 0.0254,
+};
+
+function toMetres(value, unit) {
+  return value * METRES_PER_UNIT[unit];
+}
+
+function fromMetres(metres, unit) {
+  return metres / METRES_PER_UNIT[unit];
+}
+
 // Gauge from a knitted sample: count the stitches and rows in it, measure how
-// big it came out, and divide. Measurements in centimetres, answer in
-// millimetres, to match the gauge boxes.
-function gaugeFromSwatch(stitches, rows, widthCm, heightCm) {
+// big it came out, and divide. Works in metres both in and out, so it does not
+// care which unit the knitter measured with — the caller converts.
+function gaugeFromSwatch(stitches, rows, widthM, heightM) {
   return {
-    stitchWidth: (widthCm * 10) / stitches,
-    rowHeight: (heightCm * 10) / rows,
+    stitchWidth: widthM / stitches,
+    rowHeight: heightM / rows,
   };
 }
 

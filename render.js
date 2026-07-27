@@ -59,27 +59,9 @@ function drawSeamMarker(x, scale) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Label runs parallel to the line and sits at the fabric's mid height.
-  // It goes on whichever side of the line faces into the fabric.
-  const fontPx = 26 * scale;
-  const gap = 7 * scale;
-  const towardsCentre = x < canvas.width / 2 ? 1 : -1;
-
-  ctx.translate(x + towardsCentre * (gap + fontPx / 2), canvas.height / 2);
-  ctx.rotate(-Math.PI / 2);
-
-  ctx.font = "600 " + fontPx + "px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  // No plate behind it, so outline the glyphs instead — otherwise the label
-  // disappears wherever the fabric happens to be dark.
-  ctx.lineWidth = 1.5 * scale;
-  ctx.lineJoin = "round";
-  ctx.strokeStyle = "#fff";
-  ctx.strokeText("Seam", 0, 0);
-  ctx.fillStyle = "#111";
-  ctx.fillText("Seam", 0, 0);
-
+  // The "Seam" captions are HTML elements sitting outside the canvas —
+  // see .seamLabel in style.css. Text beside a drawing is not the
+  // renderer's job, and out there it stays crisp and selectable.
   ctx.restore();
 }
 

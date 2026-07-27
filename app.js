@@ -9,10 +9,14 @@ const PX_PER_MM = 1.2;
 const stitchesInput   = document.getElementById("stitches");
 const rowsInput       = document.getElementById("rows");
 const perStitchInput  = document.getElementById("perStitch");
+const perStitchUnitInput = document.getElementById("perStitchUnit");
 const stitchWidthInput = document.getElementById("stitchWidth");
 const rowHeightInput   = document.getElementById("rowHeight");
+const gaugeUnitInput   = document.getElementById("gaugeUnit");
+const swatchUnitInput  = document.getElementById("swatchUnit");
 const readout         = document.getElementById("readout");
 const canvasWrap      = document.getElementById("canvasWrap");
+const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
 const stitchesLabel   = document.getElementById("stitchesLabel");
 
@@ -24,12 +28,23 @@ function num(input) {
   return Number(input.value);
 }
 
+// The gauge boxes may be showing millimetres or inches; everything that uses
+// them wants millimetres, so convert in one place.
+function gaugeMm() {
+  const unit = gaugeUnitInput.value;
+  return {
+    stitchWidth: fromMetres(toMetres(num(stitchWidthInput), unit), "mm"),
+    rowHeight: fromMetres(toMetres(num(rowHeightInput), unit), "mm"),
+  };
+}
+
 // On-screen size of one cell in CSS pixels, straight from the gauge.
 // Because both dimensions come from the same gauge, cells keep the
 // fabric's true proportions instead of stretching to fill the canvas.
 function cellSize() {
-  const w = num(stitchWidthInput) * PX_PER_MM;
-  const h = num(rowHeightInput) * PX_PER_MM;
+  const gauge = gaugeMm();
+  const w = gauge.stitchWidth * PX_PER_MM;
+  const h = gauge.rowHeight * PX_PER_MM;
   // An emptied gauge box gives 0, and dividing pixels by a 0-wide cell
   // yields Infinity stitches — which would hang the grid loop.
   return { w: w > 0 ? w : 1, h: h > 0 ? h : 1 };
@@ -54,13 +69,18 @@ function draw() {
 
   // Unrolled, a tube's seam shows at both edges — they are the same line.
   const seams = circular ? [0, stitches] : null;
+  canvasArea.classList.toggle("hasSeam", circular);
 
-  const grid = buildGrid(readSequence(), stitches, rows, num(perStitchInput), circular);
+  // readSequence already returns metres, so consumption must be metres too.
+  const perStitch = toMetres(num(perStitchInput), perStitchUnitInput.value);
+
+  const grid = buildGrid(readSequence(), stitches, rows, perStitch, circular);
   drawGrid(grid, canvas.width / stitches, canvas.height / rows, seams);
 
   // Knitted in the round the fabric is a tube, so its width measurement is
   // the way round it, not the way across it.
-  const size = fabricSize(stitches, rows, num(stitchWidthInput), num(rowHeightInput));
+  const gauge = gaugeMm();
+  const size = fabricSize(stitches, rows, gauge.stitchWidth, gauge.rowHeight);
   readout.textContent =
     size.widthCm.toFixed(1) + (circular ? " cm circumference, " : " cm wide, ") +
     size.heightCm.toFixed(1) + " cm tall";
@@ -101,6 +121,11 @@ function countsFromWrapper() {
 // Matches the min-width/min-height in style.css.
 const MIN_BOX_PX = 24;
 
+// How close to the window edge a drag has to get before the page starts
+// scrolling, and how fast it then scrolls.
+const EDGE_PX = 40;
+const AUTOSCROLL_PX = 12;
+
 // Wire one grip. axis is "x" (stitches only), "y" (rows only) or "both".
 // Pointer events cover mouse, pen and touch with the same code.
 function makeResizeHandle(handle, axis) {
@@ -115,19 +140,60 @@ function makeResizeHandle(handle, axis) {
     const startW = canvasWrap.clientWidth;
     const startH = canvasWrap.clientHeight;
 
-    function onMove(ev) {
-      if (axis !== "y") {
+    // The pointer cannot leave the window, so a drag alone can never make the
+    // fabric bigger than the viewport. Holding near an edge scrolls the page
+    // and grows the fabric by the same amount, which keeps the grip under the
+    // pointer while the fabric carries on past the edge.
+    let boostX = 0;
+    let boostY = 0;
+    let pointerX = e.clientX;
+    let pointerY = e.clientY;
+    let frame = null;
+
+    function step() {
+      const growX = axis !== "y";
+      const growY = axis !== "x";
+      let scrollX = 0;
+      let scrollY = 0;
+
+      if (growX && pointerX > window.innerWidth - EDGE_PX) {
+        scrollX = AUTOSCROLL_PX;
+      } else if (growX && pointerX < EDGE_PX && window.scrollX > 0) {
+        scrollX = -AUTOSCROLL_PX;
+      }
+      if (growY && pointerY > window.innerHeight - EDGE_PX) {
+        scrollY = AUTOSCROLL_PX;
+      } else if (growY && pointerY < EDGE_PX && window.scrollY > 0) {
+        scrollY = -AUTOSCROLL_PX;
+      }
+
+      boostX += scrollX;
+      boostY += scrollY;
+
+      if (growX) {
         canvasWrap.style.width =
-          Math.max(MIN_BOX_PX, startW + ev.clientX - startX) + "px";
+          Math.max(MIN_BOX_PX, startW + pointerX - startX + boostX) + "px";
       }
-      if (axis !== "x") {
+      if (growY) {
         canvasWrap.style.height =
-          Math.max(MIN_BOX_PX, startH + ev.clientY - startY) + "px";
+          Math.max(MIN_BOX_PX, startH + pointerY - startY + boostY) + "px";
       }
-      // The size change alone is enough — the observer below redraws.
+
+      // Scrolling shifts the grip left by the same amount the fabric grew, so
+      // the two cancel and the grip stays put under the pointer.
+      if (scrollX || scrollY) window.scrollBy(scrollX, scrollY);
+
+      frame = requestAnimationFrame(step);
+    }
+
+    function onMove(ev) {
+      pointerX = ev.clientX;
+      pointerY = ev.clientY;
+      // Size is set in step(); the observer redraws when it actually changes.
     }
 
     function onUp() {
+      cancelAnimationFrame(frame);
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onUp);
       handle.removeEventListener("pointercancel", onUp);
@@ -136,6 +202,7 @@ function makeResizeHandle(handle, axis) {
     handle.addEventListener("pointermove", onMove);
     handle.addEventListener("pointerup", onUp);
     handle.addEventListener("pointercancel", onUp);
+    frame = requestAnimationFrame(step);
   });
 }
 
@@ -181,12 +248,20 @@ document.getElementById("applySwatch").addEventListener("click", function () {
     return;
   }
 
-  const g = gaugeFromSwatch(s, r, w, h);
-  stitchWidthInput.value = g.stitchWidth.toFixed(2);
-  rowHeightInput.value = g.rowHeight.toFixed(2);
+  // The swatch was measured in its own unit and the gauge boxes show theirs,
+  // so go through metres rather than assuming either.
+  const swatchUnit = swatchUnitInput.value;
+  const gaugeUnit = gaugeUnitInput.value;
+  const g = gaugeFromSwatch(s, r, toMetres(w, swatchUnit), toMetres(h, swatchUnit));
+
+  const stitchWidth = fromMetres(g.stitchWidth, gaugeUnit);
+  const rowHeight = fromMetres(g.rowHeight, gaugeUnit);
+
+  stitchWidthInput.value = Number(stitchWidth.toFixed(3));
+  rowHeightInput.value = Number(rowHeight.toFixed(3));
   swatchResult.textContent =
-    "Gauge set to " + g.stitchWidth.toFixed(2) + " mm per stitch, " +
-    g.rowHeight.toFixed(2) + " mm per row.";
+    "Gauge set to " + stitchWidth.toFixed(2) + " " + gaugeUnit + " per stitch, " +
+    rowHeight.toFixed(2) + " " + gaugeUnit + " per row.";
 
   // Cell size changed, so the canvas box has to change with it.
   sizeWrapperFromCounts();
@@ -197,6 +272,60 @@ document.getElementById("applySwatch").addEventListener("click", function () {
 // change bubbles, so one listener on the container covers every color row,
 // including rows added later.
 colorRows.addEventListener("change", draw);
+
+// Switching units should describe the same physical length, not silently
+// redefine it — so convert what is already typed rather than reinterpreting it.
+function convertBoxes(boxes, from, to) {
+  for (const box of boxes) {
+    const metres = toMetres(Number(box.value), from);
+    box.value = Number(fromMetres(metres, to).toFixed(4));
+  }
+}
+
+const lengthUnitInput = document.getElementById("lengthUnit");
+const lengthHeading = document.getElementById("lengthHeading");
+let previousLengthUnit = lengthUnitInput.value;
+
+lengthUnitInput.addEventListener("change", function () {
+  const unit = lengthUnitInput.value;
+  convertBoxes(document.querySelectorAll(".colorRow .length"), previousLengthUnit, unit);
+  previousLengthUnit = unit;
+  lengthHeading.textContent = "Length (" + unit + ")";
+  draw();
+});
+
+let previousPerStitchUnit = perStitchUnitInput.value;
+
+perStitchUnitInput.addEventListener("change", function () {
+  const unit = perStitchUnitInput.value;
+  convertBoxes([perStitchInput], previousPerStitchUnit, unit);
+  previousPerStitchUnit = unit;
+  draw();
+});
+
+// Gauge boxes: converting them keeps the fabric the same size on screen, so
+// switching to inches is purely a change of notation.
+let previousGaugeUnit = gaugeUnitInput.value;
+
+gaugeUnitInput.addEventListener("change", function () {
+  const unit = gaugeUnitInput.value;
+  convertBoxes([stitchWidthInput, rowHeightInput], previousGaugeUnit, unit);
+  previousGaugeUnit = unit;
+  draw();
+});
+
+// The swatch boxes feed nothing until "Use this gauge" is pressed, so
+// converting them is only about not making the knitter re-measure.
+let previousSwatchUnit = swatchUnitInput.value;
+
+swatchUnitInput.addEventListener("change", function () {
+  const unit = swatchUnitInput.value;
+  convertBoxes(
+    [document.getElementById("swatchWidth"), document.getElementById("swatchHeight")],
+    previousSwatchUnit, unit
+  );
+  previousSwatchUnit = unit;
+});
 document.getElementById("addColor").addEventListener("click", draw);
 
 sizeWrapperFromCounts();

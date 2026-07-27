@@ -18,6 +18,9 @@ function addColorRow(color, length) {
   len.value = length;
   len.step = "0.1";
   len.min = "0.1";
+  // The visible "Length" heading is one column title above the whole list,
+  // so each box carries its own label for anyone using a screen reader.
+  len.setAttribute("aria-label", "Length");
 
   const remove = document.createElement("button");
   remove.type = "button";
@@ -46,14 +49,17 @@ addColorRow("#0000ff", 1);
 addColorRow("#008000", 4);
 
 // Read the rows back off the page as [{ color, length }, ...].
+// Lengths come back in metres whatever unit the boxes are showing, so nothing
+// downstream has to know a unit exists.
 function readSequence() {
   const crows = document.querySelectorAll(".colorRow");
+  const unit = document.getElementById("lengthUnit").value;
   const out = [];
 
   for (const row of crows) {
     const col = row.querySelector("input[type=color]").value;
     const len = Number(row.querySelector(".length").value);
-    out.push({ color: col, length: len });
+    out.push({ color: col, length: toMetres(len, unit) });
   }
 
   return out;

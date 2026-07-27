@@ -107,6 +107,43 @@ h1 {
   cursor: ns-resize;
 }
 
+/* "Seam" captions, one per edge of the unrolled tube. They sit outside the
+   fabric, on the far side of the dashed line from it. Hidden unless the
+   fabric is circular — the margin is added then too, so flat knitting does
+   not carry empty space either side. */
+.seamLabel {
+  position: absolute;
+  top: 50%;
+  display: none;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%) rotate(180deg);
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+  color: #333;
+  white-space: nowrap;
+}
+
+.canvasArea.hasSeam {
+  margin: 0 3.25rem;
+}
+
+.canvasArea.hasSeam .seamLabel {
+  display: block;
+}
+
+.seamLabelLeft {
+  right: 100%;
+  margin-right: 0.6rem;
+}
+
+/* Further out on this side, to clear the resize grip. */
+.seamLabelRight {
+  left: 100%;
+  margin-left: 1.4rem;
+}
+
 .handleCorner {
   right: -10px;
   bottom: -10px;
@@ -203,11 +240,31 @@ input[type="color"] {
   margin: 0.2rem 0;
 }
 
-.colorRow {
-  display: flex;
+/* Header and rows share one column template so the headings line up with
+   the boxes they name. */
+.colorRow,
+.colorHeader {
+  display: grid;
+  grid-template-columns: 3.4rem 6rem max-content;
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.35rem;
+}
+
+.colorHeader {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* A value and its unit are one control, so they share one grid cell. */
+.withUnit {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.colorRow input[type="number"] {
+  width: 100%;
 }
 
 button {

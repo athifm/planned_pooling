@@ -25,6 +25,9 @@
       <div class="handle handleRight"  id="handleRight"  title="Drag to change stitches"></div>
       <div class="handle handleBottom" id="handleBottom" title="Drag to change rows"></div>
       <div class="handle handleCorner" id="handleCorner" title="Drag to change both"></div>
+
+      <span class="seamLabel seamLabelLeft">Seam</span>
+      <span class="seamLabel seamLabelRight">Seam</span>
     </div>
 
     <div class="dimension right">
@@ -40,6 +43,24 @@
   <div class="panel">
     <fieldset>
       <legend>Yarn colors</legend>
+
+      <div class="fields">
+        <label for="lengthUnit">Length unit</label>
+        <select id="lengthUnit">
+          <option value="m">metres</option>
+          <option value="cm">centimetres</option>
+          <option value="ft">feet</option>
+          <option value="yd">yards</option>
+          <option value="in">inches</option>
+        </select>
+      </div>
+
+      <div class="colorHeader">
+        <span>Color</span>
+        <span id="lengthHeading">Length (m)</span>
+        <span></span>
+      </div>
+
       <div id="colorRows"></div>
       <button type="button" id="addColor">+ Add color</button>
     </fieldset>
@@ -59,24 +80,38 @@
     <fieldset>
       <legend>Gauge</legend>
       <div class="fields">
-        <label for="stitchWidth">Stitch width (mm)</label>
-        <input type="number" id="stitchWidth" value="4.5" step="0.1" min="0.1">
+        <label for="gaugeUnit">Measured in</label>
+        <select id="gaugeUnit">
+          <option value="mm" selected>millimetres</option>
+          <option value="in">inches</option>
+        </select>
 
-        <label for="rowHeight">Row height (mm)</label>
-        <input type="number" id="rowHeight" value="3.3" step="0.1" min="0.1">
+        <label for="stitchWidth">Stitch width</label>
+        <input type="number" id="stitchWidth" value="4.5" step="0.01" min="0.01">
+
+        <label for="rowHeight">Row height</label>
+        <input type="number" id="rowHeight" value="3.3" step="0.01" min="0.01">
       </div>
 
       <details class="swatch">
         <summary>Work it out from a swatch</summary>
         <p class="hint">Knit a sample, count what went into it, then measure it.</p>
 
+        <div class="fields">
+          <label for="swatchUnit">Measured in</label>
+          <select id="swatchUnit">
+            <option value="cm" selected>centimetres</option>
+            <option value="in">inches</option>
+          </select>
+        </div>
+
         <div class="fields fieldsSwatch">
-          <label for="swatchWidth">Measured width (cm)</label>
+          <label for="swatchWidth">Measured width</label>
           <input type="number" id="swatchWidth" value="10" step="0.1" min="0.1">
           <label for="swatchStitches">Stitches</label>
           <input type="number" id="swatchStitches" value="22" min="1">
 
-          <label for="swatchHeight">Measured height (cm)</label>
+          <label for="swatchHeight">Measured height</label>
           <input type="number" id="swatchHeight" value="10" step="0.1" min="0.1">
           <label for="swatchRows">Rows</label>
           <input type="number" id="swatchRows" value="30" min="1">
@@ -90,8 +125,17 @@
     <fieldset>
       <legend>Yarn</legend>
       <div class="fields">
-        <label for="perStitch">Yarn per stitch (m)</label>
-        <input type="number" id="perStitch" value="0.05" step="0.01" min="0.001">
+        <label for="perStitch">Yarn per stitch</label>
+        <span class="withUnit">
+          <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
+          <select id="perStitchUnit" aria-label="Yarn per stitch unit">
+            <option value="m">metres</option>
+            <option value="cm" selected>centimetres</option>
+            <option value="ft">feet</option>
+            <option value="yd">yards</option>
+            <option value="in">inches</option>
+          </select>
+        </span>
       </div>
     </fieldset>
   </div>
