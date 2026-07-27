@@ -8,7 +8,7 @@ const canvas = document.getElementById("fabric");
 const ctx = canvas.getContext("2d");
 
 function drawGrid(grid, cellWidth, cellHeight){
-
+ctx.clearRect(0, 0, canvas.width, canvas.height);
 for (let r = 0; r < grid.length; r++) {
   for (let c = 0; c < grid[r].length; c++) {
     ctx.fillStyle = grid[r][c];      // the color at this cell; 
@@ -18,6 +18,5 @@ for (let r = 0; r < grid.length; r++) {
 
   
 }
-// Paint one rectangle per cell of the grid.
 
 console.log("render.js loaded");
