@@ -41,6 +41,26 @@
   </div>
 
   <div class="panel">
+    <fieldset id="mode">
+      <legend>Mode</legend>
+      <label class="choice">
+        <input type="radio" name="mode" value="basic" checked>
+        Basic
+      </label>
+      <label class="choice">
+        <input type="radio" name="mode" value="advanced">
+        Advanced — extra controls for a more accurate prediction
+      </label>
+    </fieldset>
+
+    <fieldset class="advancedOnly">
+      <legend>Display</legend>
+      <div class="fields">
+        <label for="zoom">Zoom (pixels per mm)</label>
+        <input type="number" id="zoom" value="1.2" step="0.1" min="0.1" max="20">
+      </div>
+    </fieldset>
+
     <fieldset>
       <legend>Yarn colors</legend>
 
@@ -122,7 +142,73 @@
       </details>
     </fieldset>
 
-    <fieldset>
+    <fieldset class="advancedOnly">
+      <legend>Stitch types</legend>
+      <p class="hint">
+        Different stitches eat different amounts of yarn. These figures are
+        rough starting points — measure your own to get real predictions.
+      </p>
+
+      <div class="fields">
+        <label for="typeUnit">Yarn per stitch in</label>
+        <select id="typeUnit">
+          <option value="m">metres</option>
+          <option value="cm" selected>centimetres</option>
+          <option value="ft">feet</option>
+          <option value="yd">yards</option>
+          <option value="in">inches</option>
+        </select>
+      </div>
+
+      <div class="typeHeader">
+        <span>Name</span>
+        <span>Code</span>
+        <span>Yarn per stitch</span>
+        <span></span>
+      </div>
+      <div id="typeRows"></div>
+      <button type="button" id="addType">+ Add stitch type</button>
+
+      <div class="fields typeChoice">
+        <label for="activeType">Stitch used</label>
+        <select id="activeType"></select>
+      </div>
+      <p class="hint">Used when the row template below is switched off.</p>
+    </fieldset>
+
+    <fieldset class="advancedOnly">
+      <legend>Row template</legend>
+
+      <label class="choice">
+        <input type="checkbox" id="useTemplate">
+        Build rows from a template
+      </label>
+
+      <p class="hint">
+        One entry per box. <code>3k</code> means three knits.
+        A <code>*</code> before a stitch opens a group and one after it closes
+        the group, followed by how many times — so
+        <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is a
+        140&nbsp;stitch row with slipped edges.
+        Enter, space or Tab moves to the next box.
+        The strip above counts stitches as you go; while a group is open it
+        counts the group instead, and clears once you close it.
+      </p>
+
+      <div id="templateRows"></div>
+      <button type="button" id="addTemplateRow">+ Add row</button>
+
+      <p class="hint">
+        Rows are worked once unless you mark a repeat. Tick <b>start</b> on the
+        first row of a block and <b>end</b> on the last, then say how many
+        times — tick both on one row to repeat just that row. The template then
+        states the whole fabric, so the stitch and row counts follow from it.
+        Every row has to come out the same width.
+      </p>
+      <p class="hint" id="templateResult"></p>
+    </fieldset>
+
+    <fieldset class="basicOnly">
       <legend>Yarn</legend>
       <div class="fields">
         <label for="perStitch">Yarn per stitch</label>
@@ -139,13 +225,17 @@
       </div>
     </fieldset>
   </div>
+
+  <div id="splitter" class="splitter" title="Drag to widen the controls or the fabric"></div>
   </div>
 
   <script src="yarn.js"></script>
+  <script src="consumption.js"></script>
   <script src="construction.js"></script>
   <script src="render.js"></script>
   <script src="geometry.js"></script>
   <script src="controls.js"></script>
+  <script src="settings.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

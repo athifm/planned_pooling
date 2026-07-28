@@ -14,10 +14,33 @@ h1 {
    so the fabric can come first on a narrow screen. */
 .page {
   display: grid;
-  grid-template-areas: "controls fabric";
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 2rem;
+  grid-template-areas: "controls split fabric";
+  /* A definite width, not max-content. max-content means "as wide as the
+     content wants without wrapping", so one long sentence in any panel would
+     stretch the whole column — and the column would jump about as panels
+     appear and disappear with the mode. The splitter overrides the variable. */
+  grid-template-columns: var(--controls-width, 28rem) auto minmax(0, 1fr);
+  gap: 1rem;
   align-items: start;
+}
+
+/* Viewing control, not a sizing one: the fabric's pixel size comes from the
+   gauge and stitch count, so this changes how much of it you can see, never
+   how big it is. */
+.splitter {
+  grid-area: split;
+  align-self: stretch;
+  width: 9px;
+  min-height: 6rem;
+  border-radius: 5px;
+  background: #e3e3e3;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.splitter:hover,
+.splitter.dragging {
+  background: #b0b0b0;
 }
 
 .fabricSide {
@@ -170,12 +193,29 @@ h1 {
   display: grid;
   gap: 1rem;
   align-content: start;
+  /* Grid items refuse to shrink below their content by default; this lets the
+     panels actually honour the column width instead of overflowing it. */
+  min-width: 0;
+}
+
+.panel input,
+.panel select {
+  min-width: 0;
 }
 
 fieldset {
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 0.6rem 0.8rem;
+  /* Browsers give fieldset min-inline-size: min-content in their own
+     stylesheet, so it refuses to shrink into its grid column and spills
+     sideways over the fabric. This is the standard override. */
+  min-inline-size: 0;
+  min-width: 0;
+}
+
+.panel fieldset > * {
+  max-width: 100%;
 }
 
 legend {
@@ -240,6 +280,159 @@ input[type="color"] {
   margin: 0.2rem 0;
 }
 
+/* Advanced-only controls are hidden until the mode says otherwise. They stay
+   in the page rather than being removed, so their values survive a switch to
+   basic and back — but see inEffect() in app.js: while basic is selected those
+   values are not applied. Hidden and inactive have to travel together. */
+.advancedOnly {
+  display: none;
+}
+
+body.advanced .advancedOnly {
+  display: block;
+}
+
+/* The mirror image: controls that advanced mode replaces with something
+   better. Yarn-per-stitch becomes the stitch type table. */
+body.advanced .basicOnly {
+  display: none;
+}
+
+.typeRow,
+.typeHeader {
+  display: grid;
+  grid-template-columns: 7rem 3rem 5.5rem max-content;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+/* Strip, then the repeat marks and remove together on the right. The strip
+   takes whatever is left, which is why the splitter matters. */
+.templateRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px dashed #e8e8e8;
+}
+
+.templateRow:last-child {
+  border-bottom: none;
+}
+
+/* One group, so remove sits beside the repeat marks rather than being flung
+   to the far edge on its own. */
+.templateControls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Counter strip and cells scroll together so they never drift apart. */
+.templateScroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.countStrip,
+.cellStrip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+  width: max-content;
+}
+
+.countStrip {
+  margin-bottom: 0.15rem;
+}
+
+/* Right-aligned, because the figure is the total *after* this cell — so it
+   belongs against the cell's trailing edge, where the count is reached. */
+.countCell {
+  width: 3.2rem;
+  flex: 0 0 3.2rem;
+  text-align: right;
+  padding-right: 0.35rem;
+  font-size: 0.72rem;
+  color: #567;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Inside a group the figure counts the group, not the fabric — dimmed so it
+   is not mistaken for a running total. */
+.countCell.inGroup {
+  color: #aab;
+  font-style: italic;
+}
+
+.templateCell {
+  width: 3.2rem;
+  flex: 0 0 3.2rem;
+  padding: 0.2rem 0.3rem;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  text-align: center;
+}
+
+.repeatMarks {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.repeatMark {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.repeatMark input {
+  margin-right: 0.15rem;
+}
+
+.repeatCountLabel {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.repeatCount {
+  width: 3.2rem;
+  margin-left: 0.2rem;
+}
+
+/* A template fixes the fabric's size in both directions, so none of the
+   grips has anything left to drag. */
+body.templated .handle {
+  display: none;
+}
+
+.templateCell:focus {
+  outline: 2px solid #4a7;
+  outline-offset: 1px;
+}
+
+input[readonly] {
+  background: #f2f2f2;
+  color: #555;
+}
+
+.typeHeader {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.typeRow input {
+  width: 100%;
+}
+
+.typeChoice {
+  margin-top: 0.8rem;
+}
+
 /* Header and rows share one column template so the headings line up with
    the boxes they name. */
 .colorRow,
@@ -287,6 +480,11 @@ button {
 
   .fabricSide {
     position: static;
+  }
+
+  /* Nothing to split when the columns are stacked. */
+  .splitter {
+    display: none;
   }
 }
 

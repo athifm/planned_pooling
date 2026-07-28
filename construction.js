@@ -21,7 +21,9 @@ else{
 return { row: row, col: col }
 }
 
-function buildGrid(sequence, stitchesPerRow, rows, perStitch, circular){
+// consumptionAt(k) comes from layer 2 and answers in metres. Passing a
+// function rather than a number is what lets stitches differ from each other.
+function buildGrid(sequence, stitchesPerRow, rows, consumptionAt, circular){
 
 const grid = [];
 for (let r = 0; r < rows; r++) {
@@ -34,7 +36,6 @@ for (let r = 0; r < rows; r++) {
 // makes the running total integer arithmetic, which is exact. colorAt does not
 // care what the unit is, so long as positions and band lengths share one.
 const UM = 1000000;
-const perStitchUm = Math.round(perStitch * UM);
 const sequenceUm = sequence.map(function (band) {
   return { color: band.color, length: Math.round(band.length * UM) };
 });
@@ -43,7 +44,9 @@ let used = 0
 for (let k = 0; k < stitchesPerRow * rows; k++) {
   let pos = cellOf(k, stitchesPerRow, circular)
   grid[pos.row][pos.col] = colorAt(sequenceUm,used);
-  used +=perStitchUm;
+  // Round each stitch to whole micrometres before adding it on, so the total
+  // stays exact even when consecutive stitches consume different amounts.
+  used += Math.round(consumptionAt(k) * UM);
 }
   return grid
 }
