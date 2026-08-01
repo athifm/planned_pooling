@@ -91,6 +91,7 @@ function addTypeRow(name, code, perStitch) {
     if (typeRows.children.length > 1) {
       row.remove();
       refreshTypeChoices();
+      updateAllRowCounts();
       draw();
     }
   });
@@ -119,11 +120,23 @@ function readTypes() {
   });
 }
 
+// The stitch type that means "turning the work" rather than a stitch. Matched
+// by name, so it is the row in the table that decides.
+const TURN_TYPE_NAME = "turn";
+
+function isTurnType(type) {
+  return type.name.trim().toLowerCase() === TURN_TYPE_NAME;
+}
+
 // { k: "knit", p: "purl", ... } for the template parser.
+//
+// The turn is left out on purpose. It produces no stitch, so a "t" in a row
+// template would add a phantom column to the fabric and count the turn twice —
+// once as a stitch and once as the per-row charge.
 function typeNamesByCode() {
   const map = {};
   for (const t of readTypes()) {
-    if (t.code) map[t.code] = t.name;
+    if (t.code && !isTurnType(t)) map[t.code] = t.name;
   }
   return map;
 }
@@ -138,6 +151,8 @@ function refreshTypeChoices() {
 
   select.textContent = "";
   for (const t of types) {
+    // A fabric cannot be made entirely of turning the work.
+    if (isTurnType(t)) continue;
     const option = document.createElement("option");
     option.value = t.name;
     option.textContent = t.name;
@@ -243,6 +258,7 @@ function addTemplateCell(rowEl, value) {
         previous.focus();
         previous.setSelectionRange(previous.value.length, previous.value.length);
         updateRowCounts(rowEl);
+        updateRowTotals();
         applyTemplate();
       }
     }
@@ -251,6 +267,7 @@ function addTemplateCell(rowEl, value) {
   cell.addEventListener("input", function () {
     ensureTrailingCell(rowEl);
     updateRowCounts(rowEl);
+    updateRowTotals();
     // The counters refresh on every keystroke, so the message has to as well —
     // otherwise it sits there contradicting them until the cell loses focus.
     updateTemplateMessage();
@@ -261,7 +278,11 @@ function addTemplateCell(rowEl, value) {
     cell.scrollIntoView({ block: "nearest", inline: "nearest" });
   });
 
-  cellStripOf(rowEl).appendChild(cell);
+  // The turn chip always sits at the end of the row, so new cells go before it.
+  const strip = cellStripOf(rowEl);
+  const chip = strip.querySelector(".turnChip");
+  if (chip) strip.insertBefore(cell, chip);
+  else strip.appendChild(cell);
   return cell;
 }
 
@@ -279,6 +300,15 @@ function addTemplateRow(row) {
 
   const cells = document.createElement("div");
   cells.className = "cellStrip";
+
+  // Shown only while turning is switched on. Not an input: the turn is added
+  // to every row automatically, and it is here to make that visible rather
+  // than to be edited.
+  const turnChip = document.createElement("span");
+  turnChip.className = "turnChip";
+  turnChip.textContent = "t";
+  turnChip.title = "Turning the work — costs yarn but makes no stitch";
+  cells.appendChild(turnChip);
 
   scroller.appendChild(counts);
   scroller.appendChild(cells);
@@ -320,11 +350,8 @@ function addTemplateRow(row) {
   countBox.setAttribute("aria-label", "How many times the block repeats");
   countLabel.appendChild(countBox);
 
-  function showCount() {
-    countLabel.style.visibility = endBox.checked ? "visible" : "hidden";
-  }
-  endBox.addEventListener("change", showCount);
-  showCount();
+  startBox.addEventListener("change", updateRepeatAvailability);
+  endBox.addEventListener("change", updateRepeatAvailability);
 
   marks.appendChild(startLabel);
   marks.appendChild(endLabel);
@@ -337,6 +364,9 @@ function addTemplateRow(row) {
     // A block with no rows is not a pattern.
     if (templateRowsBox.children.length > 1) {
       rowEl.remove();
+      // Removing a row can leave a later "end" with nothing open above it.
+      updateRepeatAvailability();
+      updateRowTotals();
       applyTemplate();
     }
   });
@@ -346,8 +376,18 @@ function addTemplateRow(row) {
   controls.appendChild(marks);
   controls.appendChild(remove);
 
-  rowEl.appendChild(scroller);
+  // The row's stitch count, outside the scroller so it stays put however far
+  // the strip is scrolled. Rows must all come out the same width, so having
+  // the figures in a column makes a mismatch obvious without reading the
+  // error line underneath.
+  const total = document.createElement("span");
+  total.className = "rowTotal";
+
+  // Controls first, then the strip, then the total: the controls then sit in
+  // the same place on every row instead of shifting as the strip grows.
   rowEl.appendChild(controls);
+  rowEl.appendChild(scroller);
+  rowEl.appendChild(total);
   templateRowsBox.appendChild(rowEl);
 
   for (const token of tokens) addTemplateCell(rowEl, token);
@@ -359,6 +399,100 @@ function addTemplateRow(row) {
 function setTemplateRows(rows) {
   templateRowsBox.textContent = "";
   for (const row of rows) addTemplateRow(row);
+  updateRepeatAvailability();
+  updateRowTotals();
+}
+
+// Walking the rows in order says where each mark is legal, so the illegal
+// states are unreachable rather than merely reported: "end" is offered only
+// where a repeat is open, and "start" only where none is. Between them that
+// makes an unmatched end and a nested repeat impossible to click into.
+//
+// Also owns the count box's visibility, since a repeat count means nothing
+// except on a closing row.
+function updateRepeatAvailability() {
+  let open = false;
+
+  for (const rowEl of templateRowsBox.querySelectorAll(".templateRow")) {
+    const start = rowEl.querySelector(".repeatStart");
+    const end = rowEl.querySelector(".repeatEnd");
+    const countLabel = rowEl.querySelector(".repeatCountLabel");
+
+    // Repeats do not nest, so a second start cannot be opened while one is
+    // running. An already-checked one stays enabled whatever the state — a box
+    // the user cannot untick is a trap, and settings saved before this rule
+    // existed could still arrive nested.
+    const canStart = !open || start.checked;
+    start.disabled = !canStart;
+    start.parentElement.classList.toggle("disabled", !canStart);
+    start.parentElement.title = canStart
+      ? "Start a repeat at this row"
+      : "A repeat is already open — close it with end first";
+
+    // A row may open and close its own repeat, so its own start counts first.
+    if (start.checked) open = true;
+
+    end.disabled = !open;
+    end.parentElement.classList.toggle("disabled", !open);
+    end.parentElement.title = open
+      ? "Close the repeat at this row"
+      : "No repeat is open — tick start on an earlier row first";
+
+    // A disabled control must never hold a value the user cannot clear.
+    if (!open && end.checked) end.checked = false;
+
+    if (end.checked) open = false;
+
+    countLabel.style.visibility = end.checked ? "visible" : "hidden";
+  }
+}
+
+// Every row's stitch count, and whether it agrees with the first row.
+function updateRowTotals() {
+  const codes = typeNamesByCode();
+  const rows = [...templateRowsBox.querySelectorAll(".templateRow")];
+
+  const totals = rows.map(function (rowEl) {
+    const cells = [...cellStripOf(rowEl).querySelectorAll(".templateCell")]
+      .map(function (cell) { return cell.value.trim(); });
+    const parsed = parseTemplate(cells, codes);
+    return parsed.error ? null : parsed.stitches.length;
+  });
+
+  // Compare against the commonest width, not the first row's.
+  //
+  // Half-typed input often parses as a valid but short row — "s *3k 3p*" reads
+  // as 7 stitches until the repeat count arrives — so using the first row as
+  // the reference would flag every other row red while you edited row 1. The
+  // majority is stable: whichever row you are editing is the odd one out.
+  const tally = new Map();
+  for (const n of totals) {
+    if (n !== null) tally.set(n, (tally.get(n) || 0) + 1);
+  }
+  let reference;
+  let best = 0;
+  for (const [width, count] of tally) {
+    if (count > best) { best = count; reference = width; }
+  }
+
+  rows.forEach(function (rowEl, i) {
+    const box = rowEl.querySelector(".rowTotal");
+    const n = totals[i];
+
+    if (n === null) {
+      box.textContent = "—";
+      box.title = "This row cannot be read yet";
+      box.classList.add("bad");
+      return;
+    }
+
+    const mismatch = reference !== undefined && n !== reference;
+    box.textContent = String(n);
+    box.title = mismatch
+      ? n + " stitches — does not match the first row's " + reference
+      : n + " stitches";
+    box.classList.toggle("bad", mismatch);
+  });
 }
 
 // Recount every row — needed when a stitch code changes, since that changes
@@ -367,6 +501,7 @@ function updateAllRowCounts() {
   for (const rowEl of templateRowsBox.querySelectorAll(".templateRow")) {
     updateRowCounts(rowEl);
   }
+  updateRowTotals();
 }
 
 document.getElementById("addTemplateRow").addEventListener("click", function () {
@@ -380,6 +515,9 @@ document.getElementById("addTemplateRow").addEventListener("click", function () 
     repeatEnd: false,
     repeatCount: 1,
   });
+  // A new row may be the first place an open repeat can be closed.
+  updateRepeatAvailability();
+  updateRowTotals();
   applyTemplate();
 });
 

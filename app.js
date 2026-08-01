@@ -36,8 +36,38 @@ function isAdvanced() {
 // this exists to prevent.
 //
 // Steps 3 to 5 add their entries here.
+// Says what turning is actually costing, since one turn per row sounds small
+// and is not: it accumulates down the whole fabric.
+function updateTurningNote(turnMetres, rows) {
+  const note = document.getElementById("turningNote");
+  document.body.classList.toggle("turning", turnMetres > 0);
+
+  if (!isAdvanced()) { note.textContent = ""; return; }
+
+  if (isCircular()) {
+    note.textContent = "Knitting in the round never turns, so nothing is added.";
+    return;
+  }
+  if (turnMetres <= 0) {
+    note.textContent = "";
+    return;
+  }
+
+  const unit = document.getElementById("typeUnit").value;
+  const each = fromMetres(turnMetres, unit);
+  const total = turnMetres * rows;
+  note.textContent =
+    "Adding " + each.toFixed(2) + " " + unit + " per row from the turn stitch type, " +
+    total.toFixed(2) + " m over " + rows + " rows.";
+}
+
 function templateActive() {
   return isAdvanced() && document.getElementById("useTemplate").checked;
+}
+
+function turningActive() {
+  // Knitting in the round never turns the work, so there is nothing to charge.
+  return isAdvanced() && document.getElementById("useTurning").checked && !isCircular();
 }
 
 function inEffect() {
@@ -48,6 +78,7 @@ function inEffect() {
       ? activeTypeMetres()
       : toMetres(num(perStitchInput), perStitchUnitInput.value),
     template: templateActive(),
+    turnMetres: turningActive() ? typeMetresByName()[TURN_TYPE_NAME] || 0 : 0,
   };
 }
 
@@ -139,11 +170,15 @@ function draw() {
     consumptionAt = uniformConsumption(effective.consumptionMetres);
   }
 
-  const grid = buildGrid(readSequence(), stitches, rows, consumptionAt, circular);
+  const grid = buildGrid(
+    readSequence(), stitches, rows, consumptionAt, circular, effective.turnMetres
+  );
   drawGrid(grid, canvas.width / stitches, canvas.height / rows, seams);
 
   // Knitted in the round the fabric is a tube, so its width measurement is
   // the way round it, not the way across it.
+  updateTurningNote(effective.turnMetres, rows);
+
   const gauge = gaugeMm();
   const size = fabricSize(stitches, rows, gauge.stitchWidth, gauge.rowHeight);
   readout.textContent =
@@ -417,6 +452,7 @@ function applyTemplate() {
 
 modeSet.addEventListener("change", applyMode);
 zoomInput.addEventListener("change", applyMode);
+document.getElementById("useTurning").addEventListener("change", draw);
 document.getElementById("useTemplate").addEventListener("change", applyTemplate);
 document.getElementById("templateRows").addEventListener("change", applyTemplate);
 

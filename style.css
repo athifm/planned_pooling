@@ -309,13 +309,33 @@ body.advanced .basicOnly {
 
 /* Strip, then the repeat marks and remove together on the right. The strip
    takes whatever is left, which is why the splitter matters. */
+/* Controls, then the scrolling strip, then the row's total. flex-end lines the
+   controls and the total up with the cells rather than with the counter strip
+   sitting above them. */
 .templateRow {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.6rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.45rem;
   border-bottom: 1px dashed #e8e8e8;
+}
+
+/* Outside the scroller, so it stays visible however far the strip is
+   scrolled. */
+.rowTotal {
+  flex: 0 0 auto;
+  min-width: 2.6rem;
+  padding-bottom: 0.3rem;
+  text-align: right;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: #445;
+}
+
+.rowTotal.bad {
+  color: #b8322b;
+  font-weight: 700;
 }
 
 .templateRow:last-child {
@@ -378,6 +398,25 @@ body.advanced .basicOnly {
   text-align: center;
 }
 
+/* Marks where the turn falls. Only meaningful once turning is switched on. */
+.turnChip {
+  display: none;
+  width: 3.2rem;
+  flex: 0 0 3.2rem;
+  padding: 0.2rem 0.3rem;
+  border: 1px dashed #c9b7c6;
+  border-radius: 3px;
+  background: #f7f1f6;
+  color: #8a6d85;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+body.turning .turnChip {
+  display: block;
+}
+
 .repeatMarks {
   display: flex;
   align-items: center;
@@ -388,6 +427,12 @@ body.advanced .basicOnly {
 .repeatMark {
   font-size: 0.75rem;
   color: #666;
+}
+
+/* "end" with no repeat open above it. */
+.repeatMark.disabled {
+  color: #bbb;
+  cursor: not-allowed;
 }
 
 .repeatMark input {

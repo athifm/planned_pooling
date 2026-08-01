@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 7;
+const SETTINGS_VERSION = 8;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -48,9 +48,13 @@ const DEFAULT_SETTINGS = {
     { name: "knit", code: "k", perStitch: 5 },
     { name: "purl", code: "p", perStitch: 5.5 },
     { name: "slipped", code: "s", perStitch: 2.5 },
+    // Not a stitch: yarn spent turning the work. Occupies no place in the
+    // fabric, so it is charged per row rather than per stitch.
+    { name: "turn", code: "t", perStitch: 1 },
   ],
   typeUnit: "cm",
   activeType: "knit",
+  useTurning: false,
 
   useTemplate: false,
   // 1 + 23 x 6 + 1 = 140 stitches, matching the default count. Two rows so the
@@ -111,6 +115,7 @@ function readSettings() {
     types: readTypes(),
     typeUnit: fieldValue("typeUnit"),
     activeType: fieldValue("activeType"),
+    useTurning: document.getElementById("useTurning").checked,
     useTemplate: document.getElementById("useTemplate").checked,
     template: readTemplateRows(),
   };
@@ -151,6 +156,7 @@ function applySettings(s) {
   refreshTypeChoices();
   document.getElementById("activeType").value = s.activeType;
 
+  document.getElementById("useTurning").checked = s.useTurning;
   document.getElementById("useTemplate").checked = s.useTemplate;
   setTemplateRows(s.template);
 }

@@ -23,7 +23,12 @@ return { row: row, col: col }
 
 // consumptionAt(k) comes from layer 2 and answers in metres. Passing a
 // function rather than a number is what lets stitches differ from each other.
-function buildGrid(sequence, stitchesPerRow, rows, consumptionAt, circular){
+//
+// extraPerRow is yarn spent at each row end without producing a stitch —
+// turning the work in flat knitting. It is charged between rows rather than at
+// a stitch, because a turn occupies no place in the fabric: it moves the yarn
+// on without adding a column.
+function buildGrid(sequence, stitchesPerRow, rows, consumptionAt, circular, extraPerRow){
 
 const grid = [];
 for (let r = 0; r < rows; r++) {
@@ -40,6 +45,8 @@ const sequenceUm = sequence.map(function (band) {
   return { color: band.color, length: Math.round(band.length * UM) };
 });
 
+const extraUm = Math.round((extraPerRow || 0) * UM);
+
 let used = 0
 for (let k = 0; k < stitchesPerRow * rows; k++) {
   let pos = cellOf(k, stitchesPerRow, circular)
@@ -47,6 +54,8 @@ for (let k = 0; k < stitchesPerRow * rows; k++) {
   // Round each stitch to whole micrometres before adding it on, so the total
   // stays exact even when consecutive stitches consume different amounts.
   used += Math.round(consumptionAt(k) * UM);
+  // The row's last stitch has just been worked, so this is where the turn goes.
+  if (extraUm && (k + 1) % stitchesPerRow === 0) used += extraUm;
 }
   return grid
 }
