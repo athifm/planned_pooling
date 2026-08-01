@@ -3,8 +3,9 @@
 
 const colorRows = document.getElementById("colorRows");
 
-// Build one row: a color swatch, a length in metres, and a remove button.
-function addColorRow(color, length) {
+// Build one row: a color swatch, a length, an optional fade, and a remove
+// button.
+function addColorRow(color, length, fade) {
   const row = document.createElement("div");
   row.className = "colorRow";
 
@@ -22,6 +23,54 @@ function addColorRow(color, length) {
   // so each box carries its own label for anyone using a screen reader.
   len.setAttribute("aria-label", "Length");
 
+  // How far this colour grades in from the one before it. Shown only when
+  // fades are switched on.
+  const fadeBox = document.createElement("input");
+  fadeBox.type = "number";
+  fadeBox.className = "fadeAmount fadeCell";
+  fadeBox.value = fade || 0;
+  fadeBox.step = "0.1";
+  fadeBox.min = "0";
+  fadeBox.setAttribute("aria-label", "Fade in from the previous color");
+
+  const fadeSlider = document.createElement("input");
+  fadeSlider.type = "range";
+  fadeSlider.className = "fadeSlider fadeCell";
+  fadeSlider.min = "0";
+  fadeSlider.max = "1000";
+  fadeSlider.step = "1";
+  fadeSlider.setAttribute("aria-label", "Fade length");
+
+  // The slider works in thousandths of this band's own length, so it always
+  // spans "sharp" to "graded the whole way" whatever unit the lengths are in.
+  // The number box holds the real value; the slider is only a way to reach it.
+  function sliderFromBox() {
+    const band = Number(len.value);
+    const wanted = Number(fadeBox.value) || 0;
+    // A fade cannot outrun the band it lives in.
+    const clamped = band > 0 ? Math.min(wanted, band) : 0;
+    if (clamped !== wanted) fadeBox.value = clamped;
+    fadeSlider.value = band > 0 ? Math.round((clamped / band) * 1000) : 0;
+  }
+
+  function boxFromSlider() {
+    const band = Number(len.value);
+    const value = band > 0 ? (Number(fadeSlider.value) / 1000) * band : 0;
+    fadeBox.value = Number(value.toFixed(3));
+  }
+
+  // Typed values wait for Enter or blur, as everywhere else. A slider does not
+  // need to: every position it passes through is a value you meant, so it can
+  // redraw live.
+  fadeBox.addEventListener("change", sliderFromBox);
+  len.addEventListener("change", sliderFromBox);
+  fadeSlider.addEventListener("input", function () {
+    boxFromSlider();
+    draw();
+  });
+
+  sliderFromBox();
+
   const remove = document.createElement("button");
   remove.type = "button";
   remove.textContent = "remove";
@@ -35,6 +84,8 @@ function addColorRow(color, length) {
 
   row.appendChild(swatch);
   row.appendChild(len);
+  row.appendChild(fadeBox);
+  row.appendChild(fadeSlider);
   row.appendChild(remove);
   colorRows.appendChild(row);
 }
@@ -45,10 +96,20 @@ document.getElementById("addColor").addEventListener("click", function () {
 
 // Replace the whole list. The starting rows are no longer created here — they
 // come from the saved settings, or from the defaults in settings.js.
+// Slider positions are derived from the boxes, so anything that writes to a
+// box from outside — a unit switch, "apply to all" — has to ask for a resync.
+// Firing the box's own change event reuses the wiring rather than duplicating
+// the clamp-and-position maths out here.
+function resyncFadeSliders() {
+  for (const box of colorRows.querySelectorAll(".fadeAmount")) {
+    box.dispatchEvent(new Event("change"));
+  }
+}
+
 function setColorRows(sequence) {
   colorRows.textContent = "";
   for (const band of sequence) {
-    addColorRow(band.color, band.length);
+    addColorRow(band.color, band.length, band.fade);
   }
 }
 
@@ -529,10 +590,19 @@ function readSequence() {
   const unit = document.getElementById("lengthUnit").value;
   const out = [];
 
+  const fading = document.getElementById("useFades").checked;
+
   for (const row of crows) {
     const col = row.querySelector("input[type=color]").value;
     const len = Number(row.querySelector(".length").value);
-    out.push({ color: col, length: toMetres(len, unit) });
+    // The fade values stay in the boxes when the toggle is off, so they are
+    // still there when it goes back on — but they are not applied.
+    const fade = fading ? Number(row.querySelector(".fadeAmount").value) : 0;
+    out.push({
+      color: col,
+      length: toMetres(len, unit),
+      fade: toMetres(fade, unit),
+    });
   }
 
   return out;

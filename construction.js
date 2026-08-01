@@ -42,7 +42,11 @@ for (let r = 0; r < rows; r++) {
 // care what the unit is, so long as positions and band lengths share one.
 const UM = 1000000;
 const sequenceUm = sequence.map(function (band) {
-  return { color: band.color, length: Math.round(band.length * UM) };
+  return {
+    color: band.color,
+    length: Math.round(band.length * UM),
+    fade: Math.round((band.fade || 0) * UM),
+  };
 });
 
 const extraUm = Math.round((extraPerRow || 0) * UM);
@@ -50,10 +54,14 @@ const extraUm = Math.round((extraPerRow || 0) * UM);
 let used = 0
 for (let k = 0; k < stitchesPerRow * rows; k++) {
   let pos = cellOf(k, stitchesPerRow, circular)
-  grid[pos.row][pos.col] = colorAt(sequenceUm,used);
   // Round each stitch to whole micrometres before adding it on, so the total
   // stays exact even when consecutive stitches consume different amounts.
-  used += Math.round(consumptionAt(k) * UM);
+  const stitchUm = Math.round(consumptionAt(k) * UM);
+  // Sample the middle of the stitch, not its start. A stitch spans a few
+  // centimetres of yarn, so its colour should be the one at its centre —
+  // which matters once a fade can run across several stitches.
+  grid[pos.row][pos.col] = colorAt(sequenceUm, used + Math.floor(stitchUm / 2));
+  used += stitchUm;
   // The row's last stitch has just been worked, so this is where the turn goes.
   if (extraUm && (k + 1) % stitchesPerRow === 0) used += extraUm;
 }

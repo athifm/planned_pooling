@@ -489,6 +489,32 @@ input[readonly] {
   margin-bottom: 0.35rem;
 }
 
+/* Fades add two columns rather than hiding cells inside the existing grid —
+   a display:none grid item leaves no gap, but the template still has to
+   change or the remaining cells land in the wrong columns. */
+body.fades .colorRow,
+body.fades .colorHeader {
+  grid-template-columns: 3.4rem 6rem 5rem minmax(4rem, 1fr) max-content;
+}
+
+.fadeCell,
+.fadeBlock {
+  display: none;
+}
+
+body.fades .fadeCell {
+  display: block;
+}
+
+body.fades .fadeBlock {
+  display: block;
+}
+
+.fadeSlider {
+  width: 100%;
+  min-width: 0;
+}
+
 .colorHeader {
   font-size: 0.8rem;
   color: #666;

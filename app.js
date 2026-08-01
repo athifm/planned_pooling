@@ -511,9 +511,40 @@ let previousLengthUnit = lengthUnitInput.value;
 
 lengthUnitInput.addEventListener("change", function () {
   const unit = lengthUnitInput.value;
+  // Fades are lengths in the same unit, so they convert alongside the bands.
   convertBoxes(document.querySelectorAll(".colorRow .length"), previousLengthUnit, unit);
+  convertBoxes(document.querySelectorAll(".colorRow .fadeAmount"), previousLengthUnit, unit);
+  convertBoxes([document.getElementById("fadeAll")], previousLengthUnit, unit);
+  resyncFadeSliders();
   previousLengthUnit = unit;
   lengthHeading.textContent = "Length (" + unit + ")";
+  draw();
+});
+
+// Fades are a property of the yarn, so they are offered in both modes — but
+// hidden until asked for, to keep the basic panel uncluttered.
+const useFadesInput = document.getElementById("useFades");
+
+function applyFades() {
+  document.body.classList.toggle("fades", useFadesInput.checked);
+  draw();
+}
+
+useFadesInput.addEventListener("change", applyFades);
+
+// A one-shot fill rather than a global setting that stays in force: a
+// persistent global would have to be reconciled with the per-row values every
+// time either changed. This writes the rows and gets out of the way.
+document.getElementById("applyFadeAll").addEventListener("click", function () {
+  const value = num(document.getElementById("fadeAll"));
+  if (!Number.isFinite(value) || value < 0) return;
+
+  for (const box of document.querySelectorAll(".colorRow .fadeAmount")) {
+    box.value = value;
+    // Not bubbling: each row clamps and repositions its own slider, and one
+    // redraw at the end is enough.
+    box.dispatchEvent(new Event("change"));
+  }
   draw();
 });
 
@@ -597,6 +628,7 @@ syncUnitBaselines();
 // Restoring the radio does not fire a change event, so the body class has to
 // be set explicitly — the same hazard as the unit baselines above.
 document.body.classList.toggle("advanced", isAdvanced());
+document.body.classList.toggle("fades", useFadesInput.checked);
 applyTemplate();
 
 sizeWrapperFromCounts();
