@@ -3,8 +3,9 @@
 
 const colorRows = document.getElementById("colorRows");
 
-// Build one row: a color swatch, a length in metres, and a remove button.
-function addColorRow(color, length) {
+// Build one row: a color swatch, a length, an optional fade, and a remove
+// button.
+function addColorRow(color, length, fade) {
   const row = document.createElement("div");
   row.className = "colorRow";
 
@@ -22,6 +23,67 @@ function addColorRow(color, length) {
   // so each box carries its own label for anyone using a screen reader.
   len.setAttribute("aria-label", "Length");
 
+  // Where in this band the colour starts fading into the next one. Shown only
+  // when fades are switched on.
+  //
+  // What the user sets is a *position*: "the red stays pure until here". What
+  // gets stored is the *transition length* that implies, kept on the row as a
+  // data attribute. Storing the length rather than the position is what makes
+  // a sharp band stay sharp when its length is edited — a transition is a
+  // property of the dyeing, so it should not grow because the band did.
+  row.dataset.fade = String(fade || 0);
+
+  const startBox = document.createElement("input");
+  startBox.type = "number";
+  startBox.className = "fadeStart fadeCell";
+  startBox.step = "0.1";
+  startBox.min = "0";
+  startBox.setAttribute("aria-label", "Starts fading into the next color at");
+
+  const fadeSlider = document.createElement("input");
+  fadeSlider.type = "range";
+  fadeSlider.className = "fadeSlider fadeCell";
+  fadeSlider.min = "0";
+  fadeSlider.max = "1000";
+  fadeSlider.step = "1";
+  fadeSlider.setAttribute("aria-label", "Point where the color starts fading");
+
+  // The slider runs in thousandths of this band's own length, so it behaves
+  // the same whatever unit the lengths are in, and the clamp falls out of the
+  // range instead of being enforced separately. All the way right is sharp.
+  function setFade(wanted) {
+    const band = Number(len.value) || 0;
+    const clamped = Math.max(0, Math.min(wanted, band));
+    row.dataset.fade = String(clamped);
+    const begins = band - clamped;
+    startBox.value = Number(begins.toFixed(3));
+    fadeSlider.value = band > 0 ? Math.round((begins / band) * 1000) : 1000;
+  }
+
+  function currentFade() {
+    return Number(row.dataset.fade) || 0;
+  }
+
+  // Typed values wait for Enter or blur, as everywhere else. A slider does not
+  // need to: every position it passes through is a value you meant, so it can
+  // redraw live.
+  startBox.addEventListener("change", function () {
+    const band = Number(len.value) || 0;
+    const begins = Math.max(0, Math.min(Number(startBox.value) || 0, band));
+    setFade(band - begins);
+  });
+
+  fadeSlider.addEventListener("input", function () {
+    const band = Number(len.value) || 0;
+    setFade(band - (Number(fadeSlider.value) / 1000) * band);
+    draw();
+  });
+
+  // A longer band moves the fade's starting point, but not its length.
+  len.addEventListener("change", function () { setFade(currentFade()); });
+
+  setFade(fade || 0);
+
   const remove = document.createElement("button");
   remove.type = "button";
   remove.textContent = "remove";
@@ -35,6 +97,8 @@ function addColorRow(color, length) {
 
   row.appendChild(swatch);
   row.appendChild(len);
+  row.appendChild(startBox);
+  row.appendChild(fadeSlider);
   row.appendChild(remove);
   colorRows.appendChild(row);
 }
@@ -45,10 +109,38 @@ document.getElementById("addColor").addEventListener("click", function () {
 
 // Replace the whole list. The starting rows are no longer created here — they
 // come from the saved settings, or from the defaults in settings.js.
+// The visible position and the slider are both derived from the stored fade
+// length, so anything that writes that from outside — a unit switch, "apply to
+// all" — has to ask for a redisplay. Firing the length box's own change event
+// reuses the row's wiring rather than duplicating the maths out here.
+function resyncFadeSliders() {
+  for (const row of colorRows.querySelectorAll(".colorRow")) {
+    row.querySelector(".length").dispatchEvent(new Event("change"));
+  }
+}
+
+// Every row's transition length, in whatever unit the boxes are showing.
+function setFadeOnAllRows(fade) {
+  for (const row of colorRows.querySelectorAll(".colorRow")) {
+    row.dataset.fade = String(fade);
+  }
+  resyncFadeSliders();
+}
+
+// Fades are lengths too, so a unit switch has to convert them alongside the
+// band lengths — they live in a data attribute rather than a box, so
+// convertBoxes cannot reach them.
+function convertFades(from, to) {
+  for (const row of colorRows.querySelectorAll(".colorRow")) {
+    const fade = Number(row.dataset.fade) || 0;
+    row.dataset.fade = String(Number(fromMetres(toMetres(fade, from), to).toFixed(4)));
+  }
+}
+
 function setColorRows(sequence) {
   colorRows.textContent = "";
   for (const band of sequence) {
-    addColorRow(band.color, band.length);
+    addColorRow(band.color, band.length, band.fade);
   }
 }
 
@@ -529,10 +621,19 @@ function readSequence() {
   const unit = document.getElementById("lengthUnit").value;
   const out = [];
 
+  const fading = document.getElementById("useFades").checked;
+
   for (const row of crows) {
     const col = row.querySelector("input[type=color]").value;
     const len = Number(row.querySelector(".length").value);
-    out.push({ color: col, length: toMetres(len, unit) });
+    // The fade values stay on the rows when the toggle is off, so they are
+    // still there when it goes back on — but they are not applied.
+    const fade = fading ? Number(row.dataset.fade) || 0 : 0;
+    out.push({
+      color: col,
+      length: toMetres(len, unit),
+      fade: toMetres(fade, unit),
+    });
   }
 
   return out;

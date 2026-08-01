@@ -75,14 +75,40 @@
         </select>
       </div>
 
+      <label class="choice">
+        <input type="checkbox" id="useFades">
+        Colors fade into each other
+      </label>
+
       <div class="colorHeader">
         <span>Color</span>
         <span id="lengthHeading">Length (m)</span>
+        <span class="fadeCell">Fade starts here</span>
+        <span class="fadeCell"></span>
         <span></span>
       </div>
 
       <div id="colorRows"></div>
       <button type="button" id="addColor">+ Add color</button>
+
+      <div class="fadeBlock">
+        <p class="hint">
+          <b>Measuring.</b> A color's length starts where that color is pure
+          and ends where the <i>next</i> color is pure — so the change between
+          them lives inside the band. Then slide to the point where the pure
+          color starts fading into the next one. All the way right means a
+          sharp change. The fade comes out of the band, so the repeat length
+          never moves.
+        </p>
+
+        <div class="fields">
+          <label for="fadeAll">Set every transition to</label>
+          <span class="withUnit">
+            <input type="number" id="fadeAll" value="0" step="0.1" min="0">
+            <button type="button" id="applyFadeAll">Apply to all</button>
+          </span>
+        </div>
+      </div>
     </fieldset>
 
     <fieldset id="construction">

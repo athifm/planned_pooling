@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 8;
+const SETTINGS_VERSION = 9;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -22,12 +22,17 @@ const DEFAULT_SETTINGS = {
   controlsWidth: 448,
   // Also the value basic mode forces zoom back to.
   zoom: 1.2,
+  // fade is how far this colour grades in from the one before it, in the same
+  // unit as length. Zero is a sharp change, which is how every yarn behaves
+  // until someone switches fades on.
   sequence: [
-    { color: "#ff0000", length: 2 },
-    { color: "#0000ff", length: 1 },
-    { color: "#008000", length: 4 },
+    { color: "#ff0000", length: 2, fade: 0 },
+    { color: "#0000ff", length: 1, fade: 0 },
+    { color: "#008000", length: 4, fade: 0 },
   ],
   lengthUnit: "m",
+  useFades: false,
+  fadeAll: 0,
   stitches: 140,
   rows: 50,
   perStitch: 5,
@@ -96,9 +101,12 @@ function readSettings() {
       return {
         color: row.querySelector("input[type=color]").value,
         length: Number(row.querySelector(".length").value),
+        fade: Number(row.dataset.fade) || 0,
       };
     }),
     lengthUnit: fieldValue("lengthUnit"),
+    useFades: document.getElementById("useFades").checked,
+    fadeAll: fieldNumber("fadeAll"),
     stitches: fieldNumber("stitches"),
     rows: fieldNumber("rows"),
     perStitch: fieldNumber("perStitch"),
@@ -128,6 +136,8 @@ function applySettings(s) {
   document.querySelector("input[name=mode][value=" + s.mode + "]").checked = true;
   setControlsWidth(s.controlsWidth);
   document.getElementById("zoom").value = s.zoom;
+  document.getElementById("useFades").checked = s.useFades;
+  document.getElementById("fadeAll").value = s.fadeAll;
   document.getElementById("lengthUnit").value = s.lengthUnit;
   document.getElementById("stitches").value = s.stitches;
   document.getElementById("rows").value = s.rows;
