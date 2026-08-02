@@ -33,31 +33,56 @@ function addColorRow(color, length, fade) {
   // property of the dyeing, so it should not grow because the band did.
   row.dataset.fade = String(fade || 0);
 
-  const startBox = document.createElement("input");
-  startBox.type = "number";
-  startBox.className = "fadeStart fadeCell";
-  startBox.step = "0.1";
-  startBox.min = "0";
-  startBox.setAttribute("aria-label", "Starts fading into the next color at");
+  // The band's colour stretched into a track, with a marker where the fade
+  // begins. The track is painted with the gradient it describes, so it is a
+  // picture of that stretch of yarn rather than an abstract level.
+  const fadeTrack = document.createElement("div");
+  fadeTrack.className = "fadeTrack fadeCell";
 
   const fadeSlider = document.createElement("input");
   fadeSlider.type = "range";
-  fadeSlider.className = "fadeSlider fadeCell";
+  fadeSlider.className = "fadeSlider";
   fadeSlider.min = "0";
   fadeSlider.max = "1000";
   fadeSlider.step = "1";
   fadeSlider.setAttribute("aria-label", "Point where the color starts fading");
 
+  // Rides above the marker. Still typeable, because the whole measuring rule
+  // was about entering what you measured with a tape.
+  const startBox = document.createElement("input");
+  startBox.type = "number";
+  startBox.className = "fadeLabel";
+  startBox.step = "0.1";
+  startBox.min = "0";
+  startBox.setAttribute("aria-label", "Starts fading into the next color at");
+
+  // The pin is its own element rather than part of the slider thumb. Browsers
+  // position a thumb relative to the track in their own way, so a thumb tall
+  // enough to stand above the track kept dipping into it. Out here its
+  // position is exactly what we set. It ignores pointer events, so the track
+  // underneath still handles every click and drag.
+  const fadePin = document.createElement("span");
+  fadePin.className = "fadePin";
+
+  fadeTrack.appendChild(startBox);
+  fadeTrack.appendChild(fadePin);
+  fadeTrack.appendChild(fadeSlider);
+
   // The slider runs in thousandths of this band's own length, so it behaves
   // the same whatever unit the lengths are in, and the clamp falls out of the
   // range instead of being enforced separately. All the way right is sharp.
-  function setFade(wanted) {
+  // keepTyped leaves the box's text alone, so a precise typed figure is not
+  // rounded away under the cursor. The stored fade is exact either way — only
+  // the display is shortened, because a floating box has room for four digits.
+  function setFade(wanted, keepTyped) {
     const band = Number(len.value) || 0;
     const clamped = Math.max(0, Math.min(wanted, band));
     row.dataset.fade = String(clamped);
     const begins = band - clamped;
-    startBox.value = Number(begins.toFixed(3));
+    if (!keepTyped) startBox.value = Number(begins.toFixed(2));
     fadeSlider.value = band > 0 ? Math.round((begins / band) * 1000) : 1000;
+    paintFadeTrack(row);
+    positionFadeLabel(row);
   }
 
   function currentFade() {
@@ -69,8 +94,11 @@ function addColorRow(color, length, fade) {
   // redraw live.
   startBox.addEventListener("change", function () {
     const band = Number(len.value) || 0;
-    const begins = Math.max(0, Math.min(Number(startBox.value) || 0, band));
-    setFade(band - begins);
+    const typed = Number(startBox.value) || 0;
+    const begins = Math.max(0, Math.min(typed, band));
+    // Keep whatever precision was typed, unless it had to be clamped — then
+    // the box has to show the value actually in force.
+    setFade(band - begins, begins === typed);
   });
 
   fadeSlider.addEventListener("input", function () {
@@ -95,13 +123,86 @@ function addColorRow(color, length, fade) {
     }
   });
 
+  // A row's track ends in the *next* row's colour, so changing any swatch
+  // repaints its neighbour above as well as itself.
+  swatch.addEventListener("input", refreshFadeVisuals);
+
   row.appendChild(swatch);
   row.appendChild(len);
-  row.appendChild(startBox);
-  row.appendChild(fadeSlider);
+  row.appendChild(fadeTrack);
   row.appendChild(remove);
   colorRows.appendChild(row);
+
+  refreshFadeVisuals();
 }
+
+// --- fade track painting ----------------------------------------------------
+
+function nextRowOf(rowEl) {
+  // The sequence repeats, so the last band grades into the first.
+  return rowEl.nextElementSibling || colorRows.firstElementChild;
+}
+
+// Paint the track with the gradient it describes: this colour held pure up to
+// the marker, then blending into the next band's colour.
+function paintFadeTrack(rowEl) {
+  const slider = rowEl.querySelector(".fadeSlider");
+  if (!slider) return;
+
+  const mine = rowEl.querySelector("input[type=color]").value;
+  const next = nextRowOf(rowEl).querySelector("input[type=color]").value;
+  const pct = Number(slider.value) / 10;
+
+  slider.style.background =
+    "linear-gradient(to right, " + mine + " 0%, " + mine + " " + pct + "%, " +
+    next + " 100%)";
+}
+
+// Width of the slider's grab head. Must match the thumb width in style.css.
+const FADE_THUMB_PX = 14;
+
+// Put the floating length box over the marker.
+//
+// A thumb's centre does not travel the whole track: it runs from half its own
+// width to the track width minus half. Placing the label at a plain percentage
+// would leave it drifting off the head by up to half a thumb at each end.
+function positionFadeLabel(rowEl) {
+  const slider = rowEl.querySelector(".fadeSlider");
+  const label = rowEl.querySelector(".fadeLabel");
+  const pin = rowEl.querySelector(".fadePin");
+  if (!slider || !label) return;
+
+  const trackWidth = slider.offsetWidth;
+  // Zero while the fade controls are hidden; positioned when they are shown.
+  if (!trackWidth) return;
+
+  const travel = trackWidth - FADE_THUMB_PX;
+  const centre = FADE_THUMB_PX / 2 + (Number(slider.value) / 1000) * travel;
+
+  // The pin marks the exact spot, so it is never clamped.
+  if (pin) pin.style.left = centre + "px";
+
+  // The label is only a readout, so it stops at the edges rather than hanging
+  // off the row.
+  const half = label.offsetWidth / 2;
+  label.style.left = Math.min(Math.max(centre, half), trackWidth - half) + "px";
+}
+
+function refreshFadeVisuals() {
+  for (const row of colorRows.querySelectorAll(".colorRow")) {
+    paintFadeTrack(row);
+    positionFadeLabel(row);
+  }
+}
+
+// The labels are positioned in pixels, so anything that changes a track's width
+// has to move them again.
+//
+// A window resize listener is not enough: dragging the splitter changes a CSS
+// variable, the grid recomputes and the tracks get wider — with no event fired
+// anywhere. Watching the element catches every cause, including ones nobody
+// thought to wire up.
+new ResizeObserver(refreshFadeVisuals).observe(colorRows);
 
 document.getElementById("addColor").addEventListener("click", function () {
   addColorRow("#cccccc", 1);
@@ -117,6 +218,7 @@ function resyncFadeSliders() {
   for (const row of colorRows.querySelectorAll(".colorRow")) {
     row.querySelector(".length").dispatchEvent(new Event("change"));
   }
+  refreshFadeVisuals();
 }
 
 // Every row's transition length, in whatever unit the boxes are showing.

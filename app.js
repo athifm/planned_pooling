@@ -506,7 +506,6 @@ function convertBoxes(boxes, from, to) {
 }
 
 const lengthUnitInput = document.getElementById("lengthUnit");
-const lengthHeading = document.getElementById("lengthHeading");
 let previousLengthUnit = lengthUnitInput.value;
 
 lengthUnitInput.addEventListener("change", function () {
@@ -517,7 +516,6 @@ lengthUnitInput.addEventListener("change", function () {
   convertFades(previousLengthUnit, unit);
   resyncFadeSliders();
   previousLengthUnit = unit;
-  lengthHeading.textContent = "Length (" + unit + ")";
   draw();
 });
 
@@ -527,6 +525,9 @@ const useFadesInput = document.getElementById("useFades");
 
 function applyFades() {
   document.body.classList.toggle("fades", useFadesInput.checked);
+  // Track widths are zero while the controls are hidden, so the labels can
+  // only be placed once the class has made them visible.
+  refreshFadeVisuals();
   draw();
 }
 
@@ -626,6 +627,7 @@ syncUnitBaselines();
 // be set explicitly — the same hazard as the unit baselines above.
 document.body.classList.toggle("advanced", isAdvanced());
 document.body.classList.toggle("fades", useFadesInput.checked);
+refreshFadeVisuals();
 applyTemplate();
 
 sizeWrapperFromCounts();

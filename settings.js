@@ -156,8 +156,6 @@ function applySettings(s) {
     "input[name=construction][value=" + s.construction + "]"
   ).checked = true;
 
-  document.getElementById("lengthHeading").textContent =
-    "Length (" + s.lengthUnit + ")";
 
   setTypeRows(s.types);
   document.getElementById("typeUnit").value = s.typeUnit;
