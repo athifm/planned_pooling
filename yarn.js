@@ -28,12 +28,49 @@ function blendColors(from, to, t) {
   return "rgb(" + mix(a[0], b[0]) + "," + mix(a[1], b[1]) + "," + mix(a[2], b[2]) + ")";
 }
 
-function colorAt(sequence, x) {
-  let rep_len = 0;
-  for (const band of sequence) {
-    rep_len += band.length;
-  }
+function repeatLength(sequence) {
+  let total = 0;
+  for (const band of sequence) total += band.length;
+  return total;
+}
 
+// Turn a position in the repeat into something findable on real yarn.
+//
+// A band runs from where its colour is pure, so a band start is the one point
+// on a skein you can identify without a tape — "where pure green begins".
+//
+// Both neighbouring landmarks are reported, because a new ball can begin
+// anywhere in the sequence and there is no telling which of them is actually
+// present in the yarn you are holding. Measuring back from the colour ahead is
+// the easier of the two — you watch it coming and stop short, rather than
+// spotting a landmark, marking it, and measuring on past it — but only if that
+// colour is in front of you.
+function landmarkFor(sequence, phase) {
+  const total = repeatLength(sequence);
+  if (!(total > 0) || sequence.length === 0) return null;
+
+  const pos = ((phase % total) + total) % total;
+
+  let start = 0;
+  for (let i = 0; i < sequence.length; i++) {
+    const band = sequence[i];
+    const end = start + band.length;
+
+    if (pos < end || i === sequence.length - 1) {
+      return {
+        // The colour this point is inside, and how far past its start.
+        after: { color: band.color, offset: pos - start },
+        // The colour coming up, and how far short of it this point falls.
+        before: { color: sequence[(i + 1) % sequence.length].color, offset: end - pos },
+      };
+    }
+    start = end;
+  }
+  return null;
+}
+
+function colorAt(sequence, x) {
+  const rep_len = repeatLength(sequence);
   const pos = x % rep_len;
   let total = 0;
 

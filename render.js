@@ -10,7 +10,11 @@ const ctx = canvas.getContext("2d");
 // seamColumns is an array of column boundaries to mark with a vertical line,
 // or null for none. The renderer does not know what a seam is — it just draws
 // lines where it is told, which keeps the knitting knowledge in layer 3.
-function drawGrid(grid, cellWidth, cellHeight, seamColumns){
+// joinBoundary is { row, fromCol, toCol } or null: the line runs along the
+// bottom of that row across those columns, steps, and continues along the top
+// for the rest. Told which columns, the renderer needs to know nothing about
+// serpentine or balls of yarn.
+function drawGrid(grid, cellWidth, cellHeight, seamColumns, joinBoundary){
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 for (let r = 0; r < grid.length; r++) {
   // Round each cell's edges to whole pixels so neighbours abut exactly.
@@ -27,6 +31,8 @@ for (let r = 0; r < grid.length; r++) {
   }
 }
 
+if (joinBoundary) drawJoinBoundary(joinBoundary, cellWidth, cellHeight);
+
 if (seamColumns) {
   // The canvas bitmap is bigger than its CSS size on high-density screens,
   // so scale the marker by that ratio — otherwise it shrinks on a retina
@@ -40,6 +46,47 @@ if (seamColumns) {
     drawSeamMarker(x, scale);
   }
 }
+}
+
+// Where one ball of yarn ended. The line steps mid-row because that is where
+// the ball actually ran out — a straight rule across the fabric would claim a
+// whole row came off one ball when half of it did not.
+function drawJoinBoundary(boundary, cellWidth, cellHeight) {
+  const scale = canvas.clientWidth ? canvas.width / canvas.clientWidth : 1;
+
+  const low = Math.round((boundary.row + 1) * cellHeight);
+  const high = Math.round(boundary.row * cellHeight);
+  const stepStart = Math.round(boundary.fromCol * cellWidth);
+  const stepEnd = Math.round((boundary.toCol + 1) * cellWidth);
+
+  ctx.save();
+  ctx.beginPath();
+
+  // Below the join row for the stitches that came off this ball, above it for
+  // the rest. Which side the step falls on depends on the row's direction, and
+  // that is already baked into fromCol and toCol.
+  if (stepStart > 0) {
+    ctx.moveTo(0, high);
+    ctx.lineTo(stepStart, high);
+    ctx.lineTo(stepStart, low);
+  } else {
+    ctx.moveTo(0, low);
+  }
+
+  ctx.lineTo(stepEnd, low);
+
+  if (stepEnd < canvas.width) {
+    ctx.lineTo(stepEnd, high);
+    ctx.lineTo(canvas.width, high);
+  }
+
+  ctx.lineWidth = 5 * scale;
+  ctx.strokeStyle = "#fff";
+  ctx.stroke();
+  ctx.lineWidth = 3 * scale;
+  ctx.strokeStyle = "#111";
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawSeamMarker(x, scale) {

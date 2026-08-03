@@ -14,6 +14,12 @@ const rowHeightInput   = document.getElementById("rowHeight");
 const gaugeUnitInput   = document.getElementById("gaugeUnit");
 const swatchUnitInput  = document.getElementById("swatchUnit");
 const readout         = document.getElementById("readout");
+const yarnReadout     = document.getElementById("yarnReadout");
+const skeinLengthInput = document.getElementById("skeinLength");
+const joinRowInput    = document.getElementById("joinRow");
+const joinStitchInput = document.getElementById("joinStitch");
+const joinAdvice      = document.getElementById("joinAdvice");
+const tailInput       = document.getElementById("tail");
 const canvasWrap      = document.getElementById("canvasWrap");
 const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
@@ -132,6 +138,118 @@ function cellSize() {
   return { w: w > 0 ? w : 1, h: h > 0 ? h : 1 };
 }
 
+// The join the knitter has reported, as a stitch number, or null.
+// Row and stitch are given the way a pattern reads them: both 1-based, and the
+// stitch is the nth worked in that row, not a column — on a reversed row those
+// are different things.
+function reportedJoin(stitches, rows) {
+  const row = num(joinRowInput);
+  const stitch = num(joinStitchInput);
+  if (!Number.isFinite(row) || !Number.isFinite(stitch)) return null;
+  if (row < 1 || stitch < 1 || row > rows || stitch > stitches) return null;
+  return (row - 1) * stitches + (stitch - 1);
+}
+
+// Which part of the join row came off the ball that just ran out. Everything
+// above the row did; below it did not; within it, it depends which way the row
+// was worked.
+function joinBoundaryFor(k, stitches, circular) {
+  const row = Math.floor(k / stitches);
+  const within = k % stitches;
+  const leftToRight = circular || row % 2 === 0;
+
+  return leftToRight
+    ? { row: row, fromCol: 0, toCol: within }
+    : { row: row, fromCol: stitches - 1 - within, toCol: stitches - 1 };
+}
+
+// A swatch rather than a hex code: the instruction gets followed while looking
+// at yarn, not at a colour picker.
+function colorChip(color) {
+  const chip = document.createElement("span");
+  chip.className = "inlineSwatch";
+  chip.style.background = color;
+  return chip;
+}
+
+function say(parent, text) {
+  parent.appendChild(document.createTextNode(text));
+}
+
+// Where to begin the next ball, given as both landmarks — a new ball can start
+// anywhere in the repeat, so there is no knowing which of the two is in front
+// of the knitter.
+function showJoinAdvice(sequence, usedMetres) {
+  joinAdvice.textContent = "";
+  if (usedMetres === null) return;
+
+  const spot = landmarkFor(sequence, usedMetres);
+  if (!spot) return;
+
+  const unit = lengthUnitInput.value;
+  const back = fromMetres(spot.before.offset, unit);
+  const forward = fromMetres(spot.after.offset, unit);
+
+  say(joinAdvice, "Start the next ball " + back.toFixed(2) + " " + unit + " before pure ");
+  joinAdvice.appendChild(colorChip(spot.before.color));
+  say(joinAdvice, " begins — or " + forward.toFixed(2) + " " + unit + " after pure ");
+  joinAdvice.appendChild(colorChip(spot.after.color));
+  say(joinAdvice, " begins. ");
+
+  // The tail is cut from the yarn before that point, so the point has to have
+  // yarn behind it. Where the ball actually starts is unknowable, so this is a
+  // note rather than something the arithmetic can settle.
+  const tail = num(tailInput);
+  if (tail > 0) {
+    const repeat = fromMetres(repeatLength(sequence), unit);
+    say(joinAdvice,
+      "Leave a " + tail.toFixed(2) + " " + unit +
+      " tail before it; if the ball has less than that in front, move on one " +
+      "whole repeat (" + repeat.toFixed(2) + " " + unit + ").");
+  }
+}
+
+// How many balls, given that each one after the first loses an unknown amount
+// to reaching the right place in its colour sequence.
+function showYarnNeeded(totalMetres, sequence) {
+  const unit = lengthUnitInput.value;
+  const total = fromMetres(totalMetres, unit);
+  let text = "Needs " + total.toFixed(1) + " " + unit;
+
+  const skein = toMetres(num(skeinLengthInput), unit);
+  if (skein > 0) {
+    // The first ball is not like the rest: you start knitting wherever it
+    // starts, so none of it is spent reaching the right place in the sequence.
+    // Every ball after it loses the tail, and up to a whole repeat on top if it
+    // happens to begin just past the point the pattern needs.
+    const repeat = repeatLength(sequence);
+    const tail = toMetres(num(tailInput), unit);
+    const bestLater = skein - tail;
+    const worstLater = skein - repeat - tail;
+
+    if (bestLater <= 0) {
+      text += " — a ball this short is all tail";
+    } else if (totalMetres <= skein) {
+      text += " — 1 skein";
+    } else {
+      const rest = totalMetres - skein;
+      const fewest = 1 + Math.ceil(rest / bestLater);
+      const most = worstLater > 0 ? 1 + Math.ceil(rest / worstLater) : null;
+
+      if (most === null) {
+        text += " — " + fewest + " skeins at best, but a join can cost more " +
+                "than a ball this short holds";
+      } else if (fewest === most) {
+        text += " — " + fewest + " skeins";
+      } else {
+        text += " — " + fewest + " to " + most + " skeins";
+      }
+    }
+  }
+
+  yarnReadout.textContent = text;
+}
+
 function draw() {
   const stitches = num(stitchesInput);
   const rows = num(rowsInput);
@@ -170,10 +288,28 @@ function draw() {
     consumptionAt = uniformConsumption(effective.consumptionMetres);
   }
 
+  const sequence = readSequence();
   const grid = buildGrid(
-    readSequence(), stitches, rows, consumptionAt, circular, effective.turnMetres
+    sequence, stitches, rows, consumptionAt, circular, effective.turnMetres
   );
-  drawGrid(grid, canvas.width / stitches, canvas.height / rows, seams);
+
+  const join = reportedJoin(stitches, rows);
+  const boundary = join === null ? null : joinBoundaryFor(join, stitches, circular);
+
+  drawGrid(
+    grid, canvas.width / stitches, canvas.height / rows, seams, boundary
+  );
+
+  showYarnNeeded(
+    consumedThrough(stitches * rows - 1, stitches, consumptionAt, effective.turnMetres),
+    sequence
+  );
+  showJoinAdvice(
+    sequence,
+    join === null
+      ? null
+      : consumedThrough(join, stitches, consumptionAt, effective.turnMetres)
+  );
 
   // Knitted in the round the fabric is a tube, so its width measurement is
   // the way round it, not the way across it.
@@ -452,6 +588,35 @@ function applyTemplate() {
 
 modeSet.addEventListener("change", applyMode);
 zoomInput.addEventListener("change", applyMode);
+// Reporting a join. Clicking is the quick way in; the boxes make it exact and
+// let you say "row 20, stitch 87" without hunting for a 5px cell.
+canvas.addEventListener("click", function (e) {
+  const stitches = num(stitchesInput);
+  const rows = num(rowsInput);
+  if (!(stitches >= 1) || !(rows >= 1)) return;
+
+  const box = canvas.getBoundingClientRect();
+  const col = Math.floor(((e.clientX - box.left) / box.width) * stitches);
+  const row = Math.floor(((e.clientY - box.top) / box.height) * rows);
+  if (col < 0 || col >= stitches || row < 0 || row >= rows) return;
+
+  // A column is not a stitch number on a reversed row, so go through layer 3.
+  const k = stitchAt(row, col, stitches, isCircular());
+  joinRowInput.value = Math.floor(k / stitches) + 1;
+  joinStitchInput.value = (k % stitches) + 1;
+  draw();
+});
+
+document.getElementById("clearJoin").addEventListener("click", function () {
+  joinRowInput.value = "";
+  joinStitchInput.value = "";
+  draw();
+});
+
+for (const input of [joinRowInput, joinStitchInput, skeinLengthInput, tailInput]) {
+  input.addEventListener("change", draw);
+}
+
 document.getElementById("useTurning").addEventListener("change", draw);
 document.getElementById("useTemplate").addEventListener("change", applyTemplate);
 document.getElementById("templateRows").addEventListener("change", applyTemplate);
@@ -513,6 +678,7 @@ lengthUnitInput.addEventListener("change", function () {
   // Fades are lengths in the same unit, so they convert alongside the bands.
   convertBoxes(document.querySelectorAll(".colorRow .length"), previousLengthUnit, unit);
   convertBoxes([document.getElementById("fadeAll")], previousLengthUnit, unit);
+  convertBoxes([skeinLengthInput, tailInput], previousLengthUnit, unit);
   convertFades(previousLengthUnit, unit);
   resyncFadeSliders();
   previousLengthUnit = unit;

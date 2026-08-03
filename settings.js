@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 9;
+const SETTINGS_VERSION = 10;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -33,6 +33,12 @@ const DEFAULT_SETTINGS = {
   lengthUnit: "m",
   useFades: false,
   fadeAll: 0,
+  skeinLength: 0,
+  // Yarn reserved at the start of a new ball for weaving in, so unusable.
+  tail: 0.15,
+  // Empty until a ball actually runs out.
+  joinRow: "",
+  joinStitch: "",
   stitches: 140,
   rows: 50,
   perStitch: 5,
@@ -107,6 +113,10 @@ function readSettings() {
     lengthUnit: fieldValue("lengthUnit"),
     useFades: document.getElementById("useFades").checked,
     fadeAll: fieldNumber("fadeAll"),
+    skeinLength: fieldNumber("skeinLength"),
+    tail: fieldNumber("tail"),
+    joinRow: fieldValue("joinRow"),
+    joinStitch: fieldValue("joinStitch"),
     stitches: fieldNumber("stitches"),
     rows: fieldNumber("rows"),
     perStitch: fieldNumber("perStitch"),
@@ -138,6 +148,10 @@ function applySettings(s) {
   document.getElementById("zoom").value = s.zoom;
   document.getElementById("useFades").checked = s.useFades;
   document.getElementById("fadeAll").value = s.fadeAll;
+  document.getElementById("skeinLength").value = s.skeinLength;
+  document.getElementById("tail").value = s.tail;
+  document.getElementById("joinRow").value = s.joinRow;
+  document.getElementById("joinStitch").value = s.joinStitch;
   document.getElementById("lengthUnit").value = s.lengthUnit;
   document.getElementById("stitches").value = s.stitches;
   document.getElementById("rows").value = s.rows;

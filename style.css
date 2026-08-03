@@ -182,10 +182,31 @@ h1 {
   height: 100%;
 }
 
-#readout {
+#readout,
+#yarnReadout {
   margin: 0;
   font-size: 0.85rem;
   color: #555;
+}
+
+#yarnReadout {
+  margin-top: 0.2rem;
+}
+
+/* A colour in the middle of a sentence, because the instruction gets followed
+   while looking at yarn rather than at a colour picker. */
+.inlineSwatch {
+  display: inline-block;
+  width: 1.6rem;
+  height: 0.85rem;
+  border: 1px solid #999;
+  border-radius: 2px;
+  vertical-align: -0.1rem;
+}
+
+/* The fabric is clickable now: that is where a join gets reported. */
+#fabric {
+  cursor: crosshair;
 }
 
 .panel {
@@ -696,8 +717,10 @@ body.fades .colorHeader {
   width: 14px;
   height: 20px;
   transform: translateX(-50%);
-  /* Never intercepts a click: the track underneath owns all the dragging. */
-  pointer-events: none;
+  /* Grabbable in its own right — see the pointerdown handler in controls.js.
+     The track underneath keeps its native dragging as well. */
+  touch-action: none;
+  cursor: grab;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 20'%3E%3Cpath d='M2 0h10a2 2 0 0 1 2 2v9l-7 9-7-9V2a2 2 0 0 1 2-2z' fill='%233b7dd8'/%3E%3C/svg%3E")
     center / 14px 20px no-repeat;

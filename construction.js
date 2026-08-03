@@ -21,6 +21,27 @@ else{
 return { row: row, col: col }
 }
 
+// Which stitch lands on a given cell — the inverse of cellOf. Keeping it here
+// means nothing above layer 3 has to know the serpentine exists.
+function stitchAt(row, col, stitchesPerRow, circular) {
+  const within = (circular || row % 2 === 0) ? col : stitchesPerRow - 1 - col;
+  return row * stitchesPerRow + within;
+}
+
+// Yarn used through stitch k inclusive, turns included. The same walk buildGrid
+// does, so the two cannot disagree about what a fabric costs.
+function consumedThrough(k, stitchesPerRow, consumptionAt, extraPerRow) {
+  const UM = 1000000;
+  const extraUm = Math.round((extraPerRow || 0) * UM);
+  let used = 0;
+
+  for (let i = 0; i <= k; i++) {
+    used += Math.round(consumptionAt(i) * UM);
+    if (extraUm && (i + 1) % stitchesPerRow === 0) used += extraUm;
+  }
+  return used / UM;
+}
+
 // consumptionAt(k) comes from layer 2 and answers in metres. Passing a
 // function rather than a number is what lets stitches differ from each other.
 //

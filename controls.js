@@ -59,10 +59,42 @@ function addColorRow(color, length, fade) {
   // The pin is its own element rather than part of the slider thumb. Browsers
   // position a thumb relative to the track in their own way, so a thumb tall
   // enough to stand above the track kept dipping into it. Out here its
-  // position is exactly what we set. It ignores pointer events, so the track
-  // underneath still handles every click and drag.
+  // position is exactly what we set.
+  //
+  // Being outside the input means it gets no dragging for free, so it carries
+  // its own — the same pointer-capture pattern as the resize grips.
   const fadePin = document.createElement("span");
   fadePin.className = "fadePin";
+
+  fadePin.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    fadePin.setPointerCapture(e.pointerId);
+
+    function moveTo(clientX) {
+      const box = fadeSlider.getBoundingClientRect();
+      if (!box.width) return;
+      const band = Number(len.value) || 0;
+      // The hairline can reach the very ends of the track, so the position is
+      // a plain fraction of its width.
+      const fraction = Math.min(Math.max((clientX - box.left) / box.width, 0), 1);
+      setFade(band - fraction * band);
+      draw();
+    }
+
+    function onMove(ev) { moveTo(ev.clientX); }
+
+    function onUp() {
+      fadePin.removeEventListener("pointermove", onMove);
+      fadePin.removeEventListener("pointerup", onUp);
+      fadePin.removeEventListener("pointercancel", onUp);
+    }
+
+    fadePin.addEventListener("pointermove", onMove);
+    fadePin.addEventListener("pointerup", onUp);
+    fadePin.addEventListener("pointercancel", onUp);
+
+    moveTo(e.clientX);
+  });
 
   fadeTrack.appendChild(startBox);
   fadeTrack.appendChild(fadePin);
