@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 10;
+const SETTINGS_VERSION = 11;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -66,6 +66,19 @@ const DEFAULT_SETTINGS = {
   typeUnit: "cm",
   activeType: "knit",
   useTurning: false,
+
+  // Which stitches to work out real figures for. "carried" means the stitch
+  // cannot make a fabric on its own, so it has to share a swatch with one that
+  // can — true of a slipped stitch by definition, not by preference.
+  calTypes: [
+    { name: "knit", use: true, carried: false },
+    { name: "purl", use: true, carried: false },
+    { name: "slipped", use: true, carried: true },
+  ],
+  calConstruction: "both",
+  calBudget: 3000,
+  calPrecision: 1,
+  calUnit: "cm",
 
   useTemplate: false,
   // 1 + 23 x 6 + 1 = 140 stitches, matching the default count. Two rows so the
@@ -134,6 +147,11 @@ function readSettings() {
     typeUnit: fieldValue("typeUnit"),
     activeType: fieldValue("activeType"),
     useTurning: document.getElementById("useTurning").checked,
+    calTypes: readCalTypes(),
+    calConstruction: document.querySelector("input[name=calConstruction]:checked").value,
+    calBudget: fieldNumber("calBudget"),
+    calPrecision: fieldNumber("calPrecision"),
+    calUnit: fieldValue("calUnit"),
     useTemplate: document.getElementById("useTemplate").checked,
     template: readTemplateRows(),
   };
@@ -178,6 +196,15 @@ function applySettings(s) {
   refreshTypeChoices();
   document.getElementById("activeType").value = s.activeType;
 
+  // Mirrors the type table, so it can only be built once that exists.
+  refreshCalTypes(s.calTypes);
+  document.querySelector(
+    "input[name=calConstruction][value=" + s.calConstruction + "]"
+  ).checked = true;
+  document.getElementById("calBudget").value = s.calBudget;
+  document.getElementById("calPrecision").value = s.calPrecision;
+  document.getElementById("calUnit").value = s.calUnit;
+
   document.getElementById("useTurning").checked = s.useTurning;
   document.getElementById("useTemplate").checked = s.useTemplate;
   setTemplateRows(s.template);
@@ -208,6 +235,9 @@ function loadSettings() {
     if (!Array.isArray(saved.template) || saved.template.length === 0) {
       return DEFAULT_SETTINGS;
     }
+    // An empty list is legitimate here — a type table of nothing but turn would
+    // produce one — so only the wrong shape is a reason to give up.
+    if (!Array.isArray(saved.calTypes)) return DEFAULT_SETTINGS;
     return saved;
   } catch (e) {
     // Corrupt or hand-edited storage. Defaults are always better than a crash.

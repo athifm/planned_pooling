@@ -554,6 +554,72 @@ input[readonly] {
   margin-top: 0.8rem;
 }
 
+/* The calibration list mirrors the stitch type table above it, so it takes the
+   same first column width — the two read as one list seen twice. */
+.calTypeRow,
+.calHeader {
+  display: grid;
+  grid-template-columns: 7rem 4rem max-content;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.calHeader {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.calTypeName {
+  font-size: 0.9rem;
+}
+
+/* Block, so the whole column width is clickable rather than just the box. */
+.calCheck {
+  display: block;
+}
+
+/* Matches .repeatMark: a control that means nothing right now looks like it. */
+.calCheck.disabled {
+  opacity: 0.45;
+}
+
+.calLabel {
+  font-size: 0.9rem;
+  margin: 0.9rem 0 0.2rem;
+}
+
+/* Numbered, because this is a list of things to make and the numbers are what
+   gets ticked off against the pile of finished swatches. */
+.swatchList {
+  margin: 0.8rem 0 0.4rem;
+  padding-left: 1.4rem;
+  font-size: 0.9rem;
+}
+
+.swatchList li {
+  margin-bottom: 0.3rem;
+}
+
+.swatchCount {
+  font-weight: bold;
+}
+
+/* Expected against wanted, one unknown per line. A column of figures is what
+   makes the one falling short obvious. */
+.precisionTable {
+  display: grid;
+  grid-template-columns: max-content max-content max-content;
+  gap: 0.25rem 0.9rem;
+  font-size: 0.82rem;
+  color: #666;
+  margin: 0.6rem 0;
+}
+
+.precisionTable .short {
+  color: #b3261e;
+}
+
 /* Header and rows share one column template so the headings line up with
    the boxes they name. */
 /* The length column is sized by its heading, not by the numbers — band lengths

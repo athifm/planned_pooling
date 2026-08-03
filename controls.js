@@ -317,6 +317,7 @@ function addTypeRow(name, code, perStitch) {
     if (typeRows.children.length > 1) {
       row.remove();
       refreshTypeChoices();
+      refreshCalTypes();
       updateAllRowCounts();
       draw();
     }
@@ -399,7 +400,90 @@ function refreshTypeChoices() {
 document.getElementById("addType").addEventListener("click", function () {
   addTypeRow("new stitch", "", 5);
   refreshTypeChoices();
+  refreshCalTypes();
 });
+
+// --- Which stitches to calibrate --------------------------------------------
+// A mirror of the stitch type table, so it has to be rebuilt whenever a type is
+// added, removed or renamed — the same job as refreshTypeChoices, and for the
+// same reason.
+
+const calTypeList = document.getElementById("calTypes");
+
+function addCalTypeRow(name, use, carried) {
+  const row = document.createElement("div");
+  row.className = "calTypeRow";
+  // The name is the only handle on a type: it is what the solver's unknowns
+  // are called and what a saved tick is matched against.
+  row.dataset.name = name;
+
+  const label = document.createElement("span");
+  label.className = "calTypeName";
+  label.textContent = name;
+
+  const useLabel = document.createElement("label");
+  useLabel.className = "calCheck";
+  const useBox = document.createElement("input");
+  useBox.type = "checkbox";
+  useBox.className = "calUse";
+  useBox.checked = use;
+  useBox.setAttribute("aria-label", "Calibrate " + name);
+  useLabel.appendChild(useBox);
+
+  const carriedLabel = document.createElement("label");
+  carriedLabel.className = "calCheck";
+  const carriedBox = document.createElement("input");
+  carriedBox.type = "checkbox";
+  carriedBox.className = "calCarried";
+  carriedBox.checked = carried;
+  carriedBox.setAttribute("aria-label", name + " cannot fill a swatch on its own");
+  carriedLabel.appendChild(carriedBox);
+
+  // Whether a stitch needs carrying says nothing at all about a stitch that is
+  // not being calibrated, so the box goes dead with it — the same rule as the
+  // repeat marks. Its value survives, so unticking and reticking loses nothing.
+  function syncCarried() {
+    carriedBox.disabled = !useBox.checked;
+    carriedLabel.classList.toggle("disabled", !useBox.checked);
+  }
+  useBox.addEventListener("change", syncCarried);
+  syncCarried();
+
+  row.appendChild(label);
+  row.appendChild(useLabel);
+  row.appendChild(carriedLabel);
+  calTypeList.appendChild(row);
+}
+
+function readCalTypes() {
+  return [...calTypeList.querySelectorAll(".calTypeRow")].map(function (row) {
+    return {
+      name: row.dataset.name,
+      use: row.querySelector(".calUse").checked,
+      carried: row.querySelector(".calCarried").checked,
+    };
+  });
+}
+
+// Rebuild the list from the stitch type table, keeping whatever was ticked.
+//
+// Ticks are matched by name, so renaming a type loses its ticks. That is the
+// honest outcome: from out here a rename and a replacement look identical, and
+// carrying a "cannot fill a swatch on its own" flag onto what might be a
+// different stitch would be worse than asking again.
+function refreshCalTypes(saved) {
+  const previous = new Map();
+  for (const t of saved || readCalTypes()) previous.set(t.name, t);
+
+  calTypeList.textContent = "";
+  for (const t of readTypes()) {
+    // Turning is not a stitch you can choose to calibrate — it is solved for
+    // whenever a flat swatch is allowed, because every flat swatch contains it.
+    if (isTurnType(t)) continue;
+    const was = previous.get(t.name);
+    addCalTypeRow(t.name, was ? was.use : true, was ? !!was.carried : false);
+  }
+}
 
 // --- Row templates ----------------------------------------------------------
 // Each row is a strip of one-token boxes with a running count above it, like a

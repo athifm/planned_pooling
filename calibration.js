@@ -77,6 +77,32 @@ function swatchCost(swatch) {
   return swatch.stitches * swatch.rows;
 }
 
+// The search will pick the same swatch more than once, and it is right to:
+// knitting two of a shape halves the noise on it, and that is sometimes the
+// cheapest precision available. But three identical lines in a list read as a
+// mistake, so they are counted instead.
+function swatchKey(swatch) {
+  return swatch.stitches + "x" + swatch.rows +
+    (swatch.circular ? "round" : "flat") + ":" + swatch.pattern.join("/");
+}
+
+function groupSwatches(swatches) {
+  const byKey = new Map();
+  const order = [];
+  for (const swatch of swatches) {
+    const key = swatchKey(swatch);
+    const seen = byKey.get(key);
+    if (seen) {
+      seen.count++;
+    } else {
+      const entry = { swatch: swatch, count: 1 };
+      byKey.set(key, entry);
+      order.push(entry);
+    }
+  }
+  return order;
+}
+
 function describeSwatch(swatch) {
   const worked = swatch.circular ? "in the round" : "flat";
   const rows = swatch.circular ? "rounds" : "rows";
@@ -206,6 +232,13 @@ function uncertainties(A, sigma, ridge) {
 // measured: [{ swatch, used }] with used in metres, tails already removed.
 function solveCalibration(measured, unknowns, options) {
   const opts = options || {};
+
+  // No swatches is not a degenerate case of "not enough swatches" — there is
+  // no matrix at all, and the width of one cannot be read off an empty list.
+  if (measured.length === 0) {
+    return { ok: false, reason: "No swatches have been measured yet." };
+  }
+
   const A = measured.map(function (m) { return swatchRow(m.swatch, unknowns); });
   const b = measured.map(function (m) { return m.used; });
 
@@ -469,17 +502,39 @@ function prescribeSwatches(request) {
 
   // Reported without the ridge, so an under-determined set reports infinity
   // rather than a large but finite number that looks like an answer.
-  const spread = uncertainties(
-    chosen.map(function (s) { return swatchRow(s, unknowns); }), sigma, 0
-  );
+  //
+  // Choosing nothing at all is reachable: a budget too small for even the
+  // cheapest swatch plus its reserve leaves the loop with no affordable
+  // candidate on the first pass. There is no matrix then, so there is nothing
+  // to invert — every figure is simply unknown.
+  const spread = chosen.length === 0
+    ? unknowns.map(function () { return Infinity; })
+    : uncertainties(chosen.map(function (s) { return swatchRow(s, unknowns); }), sigma, 0);
   const expected = {};
-  unknowns.forEach(function (name, i) { expected[name] = spread[i]; });
+  const wanted = {};
+  // Which unknown is holding the whole set back. Without this the answer is
+  // "not good enough" with no clue what to do about it — and the fix is
+  // usually specific to one figure, like accepting a looser turn.
+  let limiting = null;
+  let worst = -Infinity;
+
+  unknowns.forEach(function (name, i) {
+    expected[name] = spread[i];
+    wanted[name] = targets[i];
+    const ratio = spread[i] / targets[i];
+    if (ratio > worst) {
+      worst = ratio;
+      limiting = name;
+    }
+  });
 
   return {
     unknowns: unknowns,
     swatches: chosen,
     cost: cost,
     expected: expected,
+    targets: wanted,
+    limiting: limiting,
     // Two different failures, worth telling apart. Not solvable means these
     // swatches cannot produce the numbers at all; solvable but short of target
     // means they will, just less precisely than asked.

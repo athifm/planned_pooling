@@ -657,6 +657,184 @@ document.getElementById("applySwatch").addEventListener("click", function () {
   draw();
 });
 
+// --- Calibration ------------------------------------------------------------
+// calibration.js does the arithmetic and knows nothing about the page. This is
+// the part that turns the panel into a request, and the answer back into words.
+
+const calibrationSet = document.getElementById("calibration");
+const prescriptionBox = document.getElementById("prescription");
+const calUnitInput = document.getElementById("calUnit");
+const calPrecisionInput = document.getElementById("calPrecision");
+const calBudgetInput = document.getElementById("calBudget");
+
+// Unknowns the solver has to find that nobody chose from the stitch table, so
+// they need explaining wherever they turn up.
+const CALIBRATION_NOTES = {
+  setup: "casting on and binding off together — no swatch can tell the two apart",
+  turn: "turning the work at the end of a flat row",
+};
+
+function calibrationRequest() {
+  const unit = document.getElementById("typeUnit").value;
+  const current = {};
+  for (const t of readTypes()) current[t.name] = toMetres(t.perStitch, unit);
+
+  return {
+    types: readCalTypes()
+      .filter(function (t) { return t.use; })
+      .map(function (t) {
+        return { name: t.name, dependent: t.carried, current: current[t.name] };
+      }),
+    construction: document.querySelector("input[name=calConstruction]:checked").value,
+    budget: num(calBudgetInput),
+    // How far one measurement can be out. This decides everything downstream:
+    // what precision is reachable at all, and so what is worth knitting.
+    sigma: toMetres(num(calPrecisionInput), calUnitInput.value),
+    // The targets are a percentage of what the app currently believes, so
+    // calibration is always asked to improve on the figure it is replacing.
+    turnCurrent: current[TURN_TYPE_NAME],
+  };
+}
+
+function calNote(text) {
+  const p = document.createElement("p");
+  p.className = "hint";
+  p.textContent = text;
+  prescriptionBox.appendChild(p);
+}
+
+// Per-stitch figures are small, and their error bars are smaller still, so a
+// fixed number of decimals either rounds them to nothing or buries the useful
+// ones in noise.
+function calAmount(metres, unit) {
+  const value = Math.abs(fromMetres(metres, unit));
+  const digits = value >= 1 ? 2 : value >= 0.01 ? 3 : 4;
+  return value.toFixed(digits) + " " + unit;
+}
+
+function showPrescription() {
+  prescriptionBox.textContent = "";
+  const request = calibrationRequest();
+
+  if (request.types.length === 0) {
+    calNote("Tick at least one stitch to calibrate.");
+    return;
+  }
+  if (request.types.every(function (t) { return t.dependent; })) {
+    calNote("At least one stitch has to be workable on its own — a carried " +
+            "stitch needs something to carry it.");
+    return;
+  }
+  if (!(request.budget >= 1) || !(request.sigma > 0)) {
+    calNote("The stitch budget and the measuring precision both need a number " +
+            "greater than zero.");
+    return;
+  }
+
+  const plan = prescribeSwatches(request);
+
+  // Not solvable and merely imprecise are different failures. This one means
+  // the swatches cannot produce the numbers at all, whatever they measure.
+  if (plan.swatches.length === 0 || !plan.solvable) {
+    calNote("No set of swatches within " + request.budget + " stitches can " +
+            "separate these figures. Raise the budget, or calibrate fewer " +
+            "stitches at once.");
+    return;
+  }
+
+  const list = document.createElement("ol");
+  list.className = "swatchList";
+
+  for (const entry of groupSwatches(plan.swatches)) {
+    const item = document.createElement("li");
+    if (entry.count > 1) {
+      const count = document.createElement("span");
+      count.className = "swatchCount";
+      count.textContent = entry.count + " of these — ";
+      item.appendChild(count);
+    }
+    item.appendChild(document.createTextNode(describeSwatch(entry.swatch)));
+    list.appendChild(item);
+  }
+  prescriptionBox.appendChild(list);
+
+  calNote(plan.cost + " stitches in all. Leave a tail at each end you can hold " +
+          "on to, and keep your usual tension — a swatch knitted more carefully " +
+          "than the real thing calibrates a fabric you are not going to make.");
+
+  // What this will actually buy, against what was asked for. Worth showing
+  // before anything is knitted, because that is exactly when it can still be
+  // changed.
+  const unit = document.getElementById("typeUnit").value;
+  const table = document.createElement("div");
+  table.className = "precisionTable";
+
+  for (const name of plan.unknowns) {
+    const short = plan.expected[name] > plan.targets[name];
+
+    const label = document.createElement("span");
+    label.textContent = name;
+    const got = document.createElement("span");
+    got.textContent = "±" + calAmount(plan.expected[name], unit);
+    const want = document.createElement("span");
+    want.textContent = "wanted ±" + calAmount(plan.targets[name], unit);
+
+    if (short) {
+      got.className = "short";
+      want.className = "short";
+    }
+
+    table.appendChild(label);
+    table.appendChild(got);
+    table.appendChild(want);
+  }
+  prescriptionBox.appendChild(table);
+
+  for (const name of plan.unknowns) {
+    if (CALIBRATION_NOTES[name]) {
+      calNote(name.charAt(0).toUpperCase() + name.slice(1) + " is " +
+              CALIBRATION_NOTES[name] + ".");
+    }
+  }
+
+  if (!plan.meetsTargets) {
+    calNote("Not everything reaches 1% of its current figure, and " +
+            plan.limiting + " is what holds the set back. Raise the stitch " +
+            "budget, measure more precisely, or accept a looser figure for it — " +
+            "the others are unaffected either way.");
+  }
+
+  calNote("Knit these, then come back to enter what each one measured. That " +
+          "part is still to be built.");
+}
+
+// A prescription is only true of the answers it was built from. Rather than
+// leave it on screen going quietly out of date, anything that would change it
+// recomputes it — but only once one has been asked for, so it never appears
+// unbidden.
+let prescriptionShowing = false;
+
+function refreshPrescription() {
+  if (prescriptionShowing) showPrescription();
+}
+
+document.getElementById("prescribe").addEventListener("click", function () {
+  prescriptionShowing = true;
+  showPrescription();
+});
+
+calibrationSet.addEventListener("change", refreshPrescription);
+
+let previousCalUnit = calUnitInput.value;
+
+calUnitInput.addEventListener("change", function () {
+  const unit = calUnitInput.value;
+  convertBoxes([calPrecisionInput], previousCalUnit, unit);
+  previousCalUnit = unit;
+  // No redisplay here: change bubbles to the fieldset, whose listener runs
+  // after this one and finds the box already converted.
+});
+
 // change bubbles, so one listener on the container covers every color row,
 // including rows added later.
 colorRows.addEventListener("change", draw);
@@ -755,11 +933,18 @@ typeUnitInput.addEventListener("change", function () {
   const unit = typeUnitInput.value;
   convertBoxes(typeRows.querySelectorAll(".typeAmount"), previousTypeUnit, unit);
   previousTypeUnit = unit;
+  // Converting leaves every consumption the same physical length, so the plan
+  // does not change — but it is reported in this unit, so it has to be redrawn.
+  refreshPrescription();
   draw();
 });
 
 typeRows.addEventListener("change", function () {
   refreshTypeChoices();
+  // A rename changes what the calibration list is offering to measure, and a
+  // changed figure moves the targets, which are a percentage of it.
+  refreshCalTypes();
+  refreshPrescription();
   // A code may have changed, which changes what every existing token means.
   updateAllRowCounts();
   applyTemplate();
@@ -767,7 +952,10 @@ typeRows.addEventListener("change", function () {
 });
 
 document.getElementById("activeType").addEventListener("change", draw);
-document.getElementById("addType").addEventListener("click", draw);
+document.getElementById("addType").addEventListener("click", function () {
+  refreshPrescription();
+  draw();
+});
 
 // Anything changing anywhere in the controls is worth saving. "change" bubbles,
 // so one listener covers every input and select in the panel, including colour
@@ -785,6 +973,7 @@ function syncUnitBaselines() {
   previousGaugeUnit = gaugeUnitInput.value;
   previousSwatchUnit = swatchUnitInput.value;
   previousTypeUnit = typeUnitInput.value;
+  previousCalUnit = calUnitInput.value;
 }
 
 applySettings(loadSettings());

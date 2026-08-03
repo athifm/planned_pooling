@@ -71,6 +71,20 @@ check("a pattern cycles and may run out mid-row (10 sts -> 8 knit, 2 slipped)",
   swatchRow(mixed, ["knit", "slipped"]).join(",") === "32,8",
   swatchRow(mixed, ["knit", "slipped"]).join(","));
 
+const grouped = groupSwatches([flat, tube, flat, flat]);
+check("identical swatches are counted rather than repeated",
+  grouped.length === 2 && grouped[0].count === 3 && grouped[1].count === 1,
+  grouped.map(function (g) { return g.count; }).join(","));
+check("grouping keeps the order they were chosen in",
+  grouped[0].swatch === flat && grouped[1].swatch === tube);
+check("same size but a different construction is a different swatch",
+  groupSwatches([flat, tube]).length === 2);
+check("same size but a different pattern is a different swatch",
+  groupSwatches([
+    { stitches: 10, rows: 10, circular: false, pattern: ["knit"] },
+    { stitches: 10, rows: 10, circular: false, pattern: ["purl"] },
+  ]).length === 2);
+
 // --- the arithmetic underneath ----------------------------------------------
 
 group("linear algebra");
@@ -141,6 +155,8 @@ const proportional = [
 ];
 check("proportional swatches do not separate knit from setup",
   !solveCalibration(proportional.map(function (s) { return fabricate(s, 0); }), ["knit", "setup"]).ok);
+check("no swatches at all is refused rather than crashed on",
+  solveCalibration([], unknowns).ok === false);
 
 // --- the claim the whole feature rests on -----------------------------------
 
@@ -258,6 +274,23 @@ check("knitting exactly what it prescribed recovers the truth",
   solved.ok && full.unknowns.every(function (n) { return close(solved.values[n], truth[n], 1e-9); }),
   solved.ok ? "" : solved.reason);
 
+group("a budget too small for even one swatch");
+
+// Reachable, and it used to throw: with nothing chosen there is no matrix, and
+// an empty one has no width to read.
+const broke = prescribeSwatches({
+  types: [{ name: "knit", current: 0.05 }],
+  construction: "flat",
+  budget: 60,
+});
+check("prescribes nothing rather than crashing", broke.swatches.length === 0,
+  String(broke.swatches.length));
+check("says it is not solvable", broke.solvable === false);
+check("says it does not meet the targets", broke.meetsTargets === false);
+check("still names every unknown", broke.unknowns.length === 3);
+check("every figure is reported as unknown",
+  broke.unknowns.every(function (n) { return broke.expected[n] === Infinity; }));
+
 group("a tight budget still returns something usable");
 
 // The trap here: greedy search will happily spend the whole budget on one big
@@ -274,6 +307,15 @@ check("did not spend everything on one swatch and leave it unsolvable", tight.so
   tight.swatches.length + " swatches for " + tight.unknowns.length + " unknowns");
 check("at least one swatch per unknown", tight.swatches.length >= tight.unknowns.length);
 check("admits it fell short of the targets", tight.meetsTargets === false);
+// Naming the worst unknown is what turns "not good enough" into something the
+// knitter can act on, so it has to be the genuinely worst one.
+check("names the unknown holding it back",
+  tight.unknowns.every(function (n) {
+    return tight.expected[n] / tight.targets[n] <=
+      tight.expected[tight.limiting] / tight.targets[tight.limiting];
+  }), tight.limiting);
+check("a met prescription still names its tightest figure",
+  roundOnly.limiting !== null && roundOnly.meetsTargets);
 report(tight);
 
 function report(prescription) {
