@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>calibration checks</title>
+  <style>
+    /* Self-contained on purpose. This page is a tool, not part of the app, so
+       it does not share style.css and does not appear in index.html. */
+    body { font: 14px/1.5 ui-monospace, Consolas, monospace; margin: 2rem; }
+    h1 { font-size: 1.2rem; }
+    #summary { font-weight: bold; padding: 0.5rem 0.75rem; margin: 1rem 0; }
+    #summary.pass { background: #e6f4ea; }
+    #summary.fail { background: #fce8e6; }
+    .ok { color: #1e7a3c; }
+    .fail { color: #b3261e; font-weight: bold; }
+    .note { color: #555; }
+    .group { margin-top: 1.25rem; font-weight: bold; }
+    pre { margin: 0; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>calibration.js — checks</h1>
+  <p class="note">Open this file in a browser. Nothing to install, nothing to run.</p>
+  <div id="summary">running…</div>
+  <pre id="out"></pre>
+
+  <script src="calibration.js"></script>
+  <script src="test-calibration.js"></script>
+</body>
+</html>
