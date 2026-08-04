@@ -294,6 +294,50 @@
       <div id="prescription"></div>
     </fieldset>
 
+    <fieldset class="measurePanel" id="measurement">
+      <legend>Measurements</legend>
+
+      <label class="choice">
+        <input type="radio" name="calMethod" value="length" checked>
+        Unravel each swatch and measure it
+      </label>
+      <label class="choice">
+        <input type="radio" name="calMethod" value="weight">
+        Weigh each swatch — quicker, and a scale repeats better than a tape
+      </label>
+
+      <div class="weightBlock">
+        <p class="hint">
+          A scale gives grams and the solver needs length, so the yarn has to
+          convert one into the other. Measure a few known lengths, weigh them,
+          and the line through those points is the conversion. Two pairs will
+          do; more is better.
+        </p>
+
+        <div class="weightHeader">
+          <span>Length (<span class="unitTag"></span>)</span>
+          <span>Weight (g)</span>
+          <span></span>
+        </div>
+        <div id="weightRows"></div>
+        <button type="button" id="addWeight">+ Add pair</button>
+        <p class="hint" id="weightResult"></p>
+      </div>
+
+      <div class="fields">
+        <label for="calTail">Tail left at each end (<span class="unitTag"></span>)</label>
+        <input type="number" id="calTail" value="15" step="1" min="0">
+      </div>
+
+      <p class="hint">
+        Both tails come off every measurement — they are yarn you held, not
+        yarn the fabric ate.
+      </p>
+
+      <div id="measureRows"></div>
+      <p class="hint" id="measureResult"></p>
+    </fieldset>
+
     <fieldset class="advancedOnly">
       <legend>Row template</legend>
 

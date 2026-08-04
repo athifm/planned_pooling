@@ -620,6 +620,92 @@ input[readonly] {
   color: #b3261e;
 }
 
+/* The measurement panel is not a mode — it is a place to write answers down,
+   so it exists only once there are swatches to write them against. */
+.measurePanel {
+  display: none;
+}
+
+body.advanced.prescribed .measurePanel {
+  display: block;
+}
+
+/* The length/weight table only means anything if you are weighing. */
+.weightBlock {
+  display: none;
+}
+
+body.weighing .weightBlock {
+  display: block;
+}
+
+.weightRow,
+.weightHeader {
+  display: grid;
+  grid-template-columns: 6rem 6rem max-content;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.weightHeader {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.weightRow input {
+  width: 100%;
+}
+
+.weightRow button {
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}
+
+/* Description above, entry below: in a column this narrow a swatch takes a
+   whole line to describe, and putting the box beside it would leave the
+   numbers in a ragged column nobody can scan. */
+.measureRow {
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed #e8e8e8;
+}
+
+.measureRow:last-child {
+  border-bottom: none;
+}
+
+.measureWhat {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.measureEntry {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.measureEntry input {
+  width: 5.5rem;
+}
+
+.unitTag {
+  font-size: 0.82rem;
+  color: #666;
+}
+
+/* What the solver will be handed, as opposed to what was typed. Quiet, because
+   it is a check rather than an instruction. */
+.measureNet {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.measureNet.bad {
+  color: #b3261e;
+}
+
 /* Header and rows share one column template so the headings line up with
    the boxes they name. */
 /* The length column is sized by its heading, not by the numbers — band lengths

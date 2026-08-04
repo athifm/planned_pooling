@@ -103,6 +103,20 @@ function groupSwatches(swatches) {
   return order;
 }
 
+// Whether two prescriptions ask for the same knitting.
+//
+// Worth knowing because measurements are entered against a list of swatches,
+// and re-running the search usually produces exactly the same list. Clearing
+// hours of knitting because someone nudged a box and put it back would be the
+// worst thing this panel could do.
+function sameSwatches(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (swatchKey(a[i]) !== swatchKey(b[i])) return false;
+  }
+  return true;
+}
+
 function describeSwatch(swatch) {
   const worked = swatch.circular ? "in the round" : "flat";
   const rows = swatch.circular ? "rounds" : "rows";

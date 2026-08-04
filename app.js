@@ -742,21 +742,7 @@ function showPrescription() {
     return;
   }
 
-  const list = document.createElement("ol");
-  list.className = "swatchList";
-
-  for (const entry of groupSwatches(plan.swatches)) {
-    const item = document.createElement("li");
-    if (entry.count > 1) {
-      const count = document.createElement("span");
-      count.className = "swatchCount";
-      count.textContent = entry.count + " of these — ";
-      item.appendChild(count);
-    }
-    item.appendChild(document.createTextNode(describeSwatch(entry.swatch)));
-    list.appendChild(item);
-  }
-  prescriptionBox.appendChild(list);
+  prescriptionBox.appendChild(swatchListOf(plan.swatches));
 
   calNote(plan.cost + " stitches in all. Leave a tail at each end you can hold " +
           "on to, and keep your usual tension — a swatch knitted more carefully " +
@@ -804,18 +790,92 @@ function showPrescription() {
             "the others are unaffected either way.");
   }
 
-  calNote("Knit these, then come back to enter what each one measured. That " +
-          "part is still to be built.");
+  calNote("Knit these, then write down what each one measured underneath.");
+  adoptPlan(plan);
 }
 
-// A prescription is only true of the answers it was built from. Rather than
-// leave it on screen going quietly out of date, anything that would change it
-// recomputes it — but only once one has been asked for, so it never appears
-// unbidden.
+// Grouped: this is a list of things to make, and three identical entries read
+// as a mistake. The measurement list below ungroups them again, because there
+// each line is a different physical swatch with its own number to write down.
+function swatchListOf(swatches) {
+  const list = document.createElement("ol");
+  list.className = "swatchList";
+
+  for (const entry of groupSwatches(swatches)) {
+    const item = document.createElement("li");
+    if (entry.count > 1) {
+      const count = document.createElement("span");
+      count.className = "swatchCount";
+      count.textContent = entry.count + " of these — ";
+      item.appendChild(count);
+    }
+    item.appendChild(document.createTextNode(describeSwatch(entry.swatch)));
+    list.appendChild(item);
+  }
+  return list;
+}
+
+// --- The prescription, once it has been issued ------------------------------
+//
+// Measurements are written against a particular list of swatches, so that list
+// has to stop moving the moment anyone starts knitting from it. This is the
+// frozen copy: what the panel below is measuring, and what phase four will
+// eventually solve.
+
+let frozen = { swatches: [], unknowns: [] };
+
+function frozenSwatches() { return frozen.swatches; }
+function frozenUnknowns() { return frozen.unknowns; }
+
+function setFrozen(swatches, unknowns, values) {
+  frozen = { swatches: swatches, unknowns: unknowns };
+  setMeasureRows(swatches, values);
+  document.body.classList.toggle("prescribed", swatches.length > 0);
+  updateCalUnitTags();
+  updateMeasurementReadout();
+}
+
+function adoptPlan(plan) {
+  // Running the search again nearly always produces the very same list — you
+  // reopened the panel, or nudged a box and put it back. Keeping the
+  // measurements when the swatches have not actually changed is the difference
+  // between a stray click costing nothing and costing a week of knitting.
+  const keep = sameSwatches(frozen.swatches, plan.swatches);
+  setFrozen(plan.swatches, plan.unknowns, keep ? readMeasurements() : []);
+}
+
+function restorePrescription(swatches, unknowns, measured) {
+  setFrozen(swatches, unknowns, measured);
+  if (swatches.length === 0) return;
+  prescriptionShowing = true;
+  prescriptionBox.appendChild(swatchListOf(swatches));
+  calNote("Prescribed earlier. Press Suggest swatches to work them out again.");
+}
+
+// A prescription is only true of the answers it was built from. While nothing
+// has been measured it simply follows them, so it can never sit there going
+// quietly out of date. Once there are measurements it stops: they describe
+// these swatches, and silently swapping the swatches under them would make
+// them wrong without anyone touching them.
 let prescriptionShowing = false;
 
+function anyMeasured() {
+  return readMeasurements().some(function (v) { return v.trim() !== ""; });
+}
+
 function refreshPrescription() {
-  if (prescriptionShowing) showPrescription();
+  if (!prescriptionShowing) return;
+
+  if (anyMeasured()) {
+    prescriptionBox.textContent = "";
+    prescriptionBox.appendChild(swatchListOf(frozen.swatches));
+    calNote("These were worked out from different answers. Press Suggest " +
+            "swatches to redo them — measurements for any swatch that changes " +
+            "will be cleared.");
+    return;
+  }
+
+  showPrescription();
 }
 
 document.getElementById("prescribe").addEventListener("click", function () {
@@ -825,14 +885,166 @@ document.getElementById("prescribe").addEventListener("click", function () {
 
 calibrationSet.addEventListener("change", refreshPrescription);
 
+// --- Writing the measurements down ------------------------------------------
+
+const measurementSet = document.getElementById("measurement");
+const calTailInput = document.getElementById("calTail");
+const measureResult = document.getElementById("measureResult");
+const weightResult = document.getElementById("weightResult");
+
+function byWeight() {
+  return document.querySelector("input[name=calMethod]:checked").value === "weight";
+}
+
+// Weighing means the boxes hold grams, not a length, so they cannot carry the
+// calibration unit like everything else in the panel.
+function updateCalUnitTags() {
+  const unit = calUnitInput.value;
+  const weighing = byWeight();
+  for (const tag of measurementSet.querySelectorAll(".unitTag")) {
+    tag.textContent = tag.classList.contains("measureUnit") && weighing ? "g" : unit;
+  }
+}
+
+// Metres per gram for this yarn, or null if the table cannot say yet.
+function yarnConversion() {
+  const unit = calUnitInput.value;
+  const pairs = readWeightPairs()
+    .map(function (p) {
+      return { metres: toMetres(Number(p.length), unit), grams: Number(p.grams) };
+    })
+    // A pair with one box still empty is being typed, not being ignored.
+    .filter(function (p) { return p.metres > 0 && p.grams > 0; });
+  return pairs.length ? metresPerGram(pairs) : null;
+}
+
+function showConversion() {
+  if (!byWeight()) {
+    weightResult.textContent = "";
+    return;
+  }
+  const perGram = yarnConversion();
+  const unit = calUnitInput.value;
+  weightResult.textContent = perGram === null
+    ? "Fill in at least one pair — a length and what it weighed."
+    : "This yarn runs " + fromMetres(perGram, unit).toFixed(2) + " " + unit +
+      " to the gram.";
+}
+
+// What one swatch actually fed the fabric: what was typed, out of grams if it
+// was weighed, with both tails taken off. Null means nothing usable was typed.
+function usedMetres(typed) {
+  const value = Number(typed);
+  if (String(typed).trim() === "" || !Number.isFinite(value) || value <= 0) return null;
+
+  const unit = calUnitInput.value;
+  const tail = toMetres(num(calTailInput), unit);
+
+  if (byWeight()) {
+    const perGram = yarnConversion();
+    if (perGram === null) return null;
+    return value * perGram - 2 * tail;
+  }
+  return toMetres(value, unit) - 2 * tail;
+}
+
+function updateMeasurementReadout() {
+  const unit = calUnitInput.value;
+  const rows = [...measureRows.querySelectorAll(".measureRow")];
+  let done = 0;
+  let impossible = 0;
+
+  for (const row of rows) {
+    const net = row.querySelector(".measureNet");
+    const used = usedMetres(row.querySelector(".measureAmount").value);
+
+    if (used === null) {
+      net.textContent = "";
+      net.classList.remove("bad");
+      continue;
+    }
+    if (used <= 0) {
+      // Two tails longer than the whole strand. Either the tail figure is
+      // wrong or the measurement is, and both are worth catching now rather
+      // than as a negative consumption three steps later.
+      net.textContent = "shorter than its own tails";
+      net.classList.add("bad");
+      impossible++;
+      continue;
+    }
+
+    net.classList.remove("bad");
+    net.textContent = "= " + fromMetres(used, unit).toFixed(1) + " " + unit + " of fabric";
+    done++;
+  }
+
+  if (rows.length === 0) {
+    measureResult.textContent = "";
+    return;
+  }
+
+  let text = done + " of " + rows.length + " measured.";
+  if (impossible > 0) {
+    text += " " + impossible + (impossible === 1 ? " cannot be right." : " cannot be right.");
+  } else if (done === rows.length) {
+    text += " Solving them is the next thing to be built.";
+  }
+  measureResult.textContent = text;
+}
+
+function applyCalMethod() {
+  document.body.classList.toggle("weighing", byWeight());
+  updateCalUnitTags();
+
+  // Grams and centimetres are not the same number, so an entry made one way
+  // means nothing the other. Emptying the boxes is the only honest option.
+  let cleared = false;
+  for (const box of measureRows.querySelectorAll(".measureAmount")) {
+    if (box.value !== "") {
+      box.value = "";
+      cleared = true;
+    }
+  }
+
+  showConversion();
+  updateMeasurementReadout();
+
+  if (cleared) {
+    measureResult.textContent =
+      "Measurements cleared — grams and " + calUnitInput.value +
+      " are not the same number.";
+  }
+}
+
+// One listener for the whole panel, so a weight pair added later is covered
+// the moment it exists.
+measurementSet.addEventListener("change", function (e) {
+  if (e.target.name === "calMethod") {
+    applyCalMethod();
+  } else {
+    showConversion();
+    updateMeasurementReadout();
+  }
+});
+
 let previousCalUnit = calUnitInput.value;
 
 calUnitInput.addEventListener("change", function () {
   const unit = calUnitInput.value;
-  convertBoxes([calPrecisionInput], previousCalUnit, unit);
+  convertBoxes([calPrecisionInput, calTailInput], previousCalUnit, unit);
+  convertBoxes(weightRows.querySelectorAll(".weightLength"), previousCalUnit, unit);
+  // While weighing, those boxes hold grams, which no change of length unit
+  // touches.
+  if (!byWeight()) {
+    convertBoxes(measureRows.querySelectorAll(".measureAmount"), previousCalUnit, unit);
+  }
   previousCalUnit = unit;
-  // No redisplay here: change bubbles to the fieldset, whose listener runs
-  // after this one and finds the box already converted.
+
+  updateCalUnitTags();
+  showConversion();
+  updateMeasurementReadout();
+  // The prescription redisplay comes from the fieldset's own listener, which
+  // runs after this one and finds the boxes already converted.
 });
 
 // change bubbles, so one listener on the container covers every color row,
@@ -843,6 +1055,9 @@ colorRows.addEventListener("change", draw);
 // redefine it — so convert what is already typed rather than reinterpreting it.
 function convertBoxes(boxes, from, to) {
   for (const box of boxes) {
+    // An empty box is empty in every unit. Converting it would write a 0 into
+    // a measurement nobody has taken yet.
+    if (box.value.trim() === "") continue;
     const metres = toMetres(Number(box.value), from);
     box.value = Number(fromMetres(metres, to).toFixed(4));
   }
@@ -982,6 +1197,10 @@ syncUnitBaselines();
 // be set explicitly — the same hazard as the unit baselines above.
 document.body.classList.toggle("advanced", isAdvanced());
 document.body.classList.toggle("fades", useFadesInput.checked);
+document.body.classList.toggle("weighing", byWeight());
+updateCalUnitTags();
+showConversion();
+updateMeasurementReadout();
 refreshFadeVisuals();
 applyTemplate();
 

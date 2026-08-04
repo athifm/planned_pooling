@@ -85,6 +85,18 @@ check("same size but a different pattern is a different swatch",
     { stitches: 10, rows: 10, circular: false, pattern: ["purl"] },
   ]).length === 2);
 
+// Measurements are written against a list of swatches, so knowing whether a
+// re-run produced the same list is what decides whether they survive it.
+check("the same list is recognised across a fresh run",
+  sameSwatches([flat, tube], [
+    { stitches: 20, rows: 10, circular: false, pattern: ["knit"] },
+    { stitches: 20, rows: 10, circular: true, pattern: ["knit"] },
+  ]));
+check("a different order is a different list — line 2 is a different swatch",
+  !sameSwatches([flat, tube], [tube, flat]));
+check("a shorter list is different", !sameSwatches([flat, tube], [flat]));
+check("two empty lists match", sameSwatches([], []));
+
 // --- the arithmetic underneath ----------------------------------------------
 
 group("linear algebra");

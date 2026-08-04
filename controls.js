@@ -485,6 +485,146 @@ function refreshCalTypes(saved) {
   }
 }
 
+// --- Length against weight --------------------------------------------------
+// Same machinery as the colour rows: a pair of numbers and a remove button.
+
+const weightRows = document.getElementById("weightRows");
+
+function addWeightRow(length, grams) {
+  const row = document.createElement("div");
+  row.className = "weightRow";
+
+  const lengthBox = document.createElement("input");
+  lengthBox.type = "number";
+  lengthBox.className = "weightLength";
+  lengthBox.value = length;
+  lengthBox.step = "0.1";
+  lengthBox.min = "0";
+  lengthBox.setAttribute("aria-label", "Length of yarn");
+
+  const gramsBox = document.createElement("input");
+  gramsBox.type = "number";
+  gramsBox.className = "weightGrams";
+  gramsBox.value = grams;
+  gramsBox.step = "0.1";
+  gramsBox.min = "0";
+  gramsBox.setAttribute("aria-label", "What that length weighs, in grams");
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "remove";
+  remove.addEventListener("click", function () {
+    row.remove();
+    showConversion();
+    updateMeasurementReadout();
+    saveSoon();
+  });
+
+  row.appendChild(lengthBox);
+  row.appendChild(gramsBox);
+  row.appendChild(remove);
+  weightRows.appendChild(row);
+}
+
+function setWeightRows(pairs) {
+  weightRows.textContent = "";
+  for (const pair of pairs) addWeightRow(pair.length, pair.grams);
+}
+
+// Exactly as typed, in whatever unit the calibration boxes are showing — the
+// caller converts, the same rule the colour rows follow.
+//
+// Strings, not numbers: a half-filled pair is a normal thing to have on screen,
+// and Number("") is 0, which would save an empty row as a real measurement of
+// nothing and bring it back looking like data.
+function readWeightPairs() {
+  return [...weightRows.querySelectorAll(".weightRow")].map(function (row) {
+    return {
+      length: row.querySelector(".weightLength").value,
+      grams: row.querySelector(".weightGrams").value,
+    };
+  });
+}
+
+document.getElementById("addWeight").addEventListener("click", function () {
+  addWeightRow("", "");
+});
+
+// --- One line per swatch knitted --------------------------------------------
+// Not a list anyone adds to: it is the prescription, turned into somewhere to
+// write the answers down. Duplicates are listed separately rather than grouped,
+// because each one is a different physical object with its own measurement —
+// the opposite of the prescription above, which is a list of things to make.
+
+const measureRows = document.getElementById("measureRows");
+
+function addMeasureRow(swatch, index, value, position, outOf) {
+  const row = document.createElement("div");
+  row.className = "measureRow";
+
+  const what = document.createElement("div");
+  what.className = "measureWhat";
+  what.textContent = (index + 1) + ". " + describeSwatch(swatch) +
+    (outOf > 1 ? " (" + position + " of " + outOf + ")" : "");
+
+  const entry = document.createElement("div");
+  entry.className = "measureEntry";
+
+  const amount = document.createElement("input");
+  amount.type = "number";
+  amount.className = "measureAmount";
+  amount.value = value === undefined ? "" : value;
+  amount.step = "0.1";
+  amount.min = "0";
+  amount.setAttribute("aria-label", "What swatch " + (index + 1) + " measured");
+
+  // Marked out from the other unit tags because this box holds grams when the
+  // swatches are being weighed, not a length.
+  const tag = document.createElement("span");
+  tag.className = "unitTag measureUnit";
+
+  // What the solver will actually be given: the measurement with both tails
+  // taken off, and grams turned into length if that is how it was weighed.
+  // Shown because it is not what was typed, and a figure the app changed
+  // behind your back is a figure you cannot check.
+  const net = document.createElement("span");
+  net.className = "measureNet";
+
+  entry.appendChild(amount);
+  entry.appendChild(tag);
+  entry.appendChild(net);
+
+  row.appendChild(what);
+  row.appendChild(entry);
+  measureRows.appendChild(row);
+}
+
+function setMeasureRows(swatches, values) {
+  measureRows.textContent = "";
+
+  // "2 of 3" ties a line back to the grouped prescription above it, so it is
+  // clear which pile of identical swatches this one came from.
+  const totals = new Map();
+  for (const swatch of swatches) {
+    const key = swatchKey(swatch);
+    totals.set(key, (totals.get(key) || 0) + 1);
+  }
+
+  const seen = new Map();
+  swatches.forEach(function (swatch, i) {
+    const key = swatchKey(swatch);
+    const position = (seen.get(key) || 0) + 1;
+    seen.set(key, position);
+    addMeasureRow(swatch, i, values ? values[i] : "", position, totals.get(key));
+  });
+}
+
+function readMeasurements() {
+  return [...measureRows.querySelectorAll(".measureAmount")].map(function (box) {
+    return box.value;
+  });
+}
+
 // --- Row templates ----------------------------------------------------------
 // Each row is a strip of one-token boxes with a running count above it, like a
 // spreadsheet. Enter, space or Tab finishes a cell and moves on; backspace in
