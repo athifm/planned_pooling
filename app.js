@@ -707,8 +707,12 @@ function calNote(text) {
 // fixed number of decimals either rounds them to nothing or buries the useful
 // ones in noise.
 function calAmount(metres, unit) {
-  const value = Math.abs(fromMetres(metres, unit));
-  const digits = value >= 1 ? 2 : value >= 0.01 ? 3 : 4;
+  const value = fromMetres(metres, unit);
+  // Size picks the precision; the sign is kept. Hiding it would turn an
+  // impossible answer into a plausible-looking one, which is the one thing
+  // this readout must never do.
+  const size = Math.abs(value);
+  const digits = size >= 1 ? 2 : size >= 0.01 ? 3 : 4;
   return value.toFixed(digits) + " " + unit;
 }
 
@@ -888,7 +892,8 @@ calibrationSet.addEventListener("change", refreshPrescription);
 // --- Writing the measurements down ------------------------------------------
 
 const measurementSet = document.getElementById("measurement");
-const calTailInput = document.getElementById("calTail");
+const calTailStartInput = document.getElementById("calTailStart");
+const calTailEndInput = document.getElementById("calTailEnd");
 const measureResult = document.getElementById("measureResult");
 const weightResult = document.getElementById("weightResult");
 
@@ -938,14 +943,15 @@ function usedMetres(typed) {
   if (String(typed).trim() === "" || !Number.isFinite(value) || value <= 0) return null;
 
   const unit = calUnitInput.value;
-  const tail = toMetres(num(calTailInput), unit);
+  const tails = toMetres(num(calTailStartInput), unit) +
+                toMetres(num(calTailEndInput), unit);
 
   if (byWeight()) {
     const perGram = yarnConversion();
     if (perGram === null) return null;
-    return value * perGram - 2 * tail;
+    return value * perGram - tails;
   }
-  return toMetres(value, unit) - 2 * tail;
+  return toMetres(value, unit) - tails;
 }
 
 function updateMeasurementReadout() {
@@ -985,12 +991,197 @@ function updateMeasurementReadout() {
 
   let text = done + " of " + rows.length + " measured.";
   if (impossible > 0) {
-    text += " " + impossible + (impossible === 1 ? " cannot be right." : " cannot be right.");
-  } else if (done === rows.length) {
-    text += " Solving them is the next thing to be built.";
+    text += " " + impossible + " cannot be right.";
   }
   measureResult.textContent = text;
+
+  showSolution();
 }
+
+// --- Solving ----------------------------------------------------------------
+//
+// Live rather than behind a button: the answer follows the measurements as
+// they are typed, the same way the fabric follows the controls. Applying it is
+// the deliberate act, and that has a button — the same split as the swatch
+// gauge, which predicts continuously and only writes when told.
+
+const solutionBox = document.getElementById("solution");
+const applyResult = document.getElementById("applyResult");
+
+// Kept so the apply button works from what is on screen rather than solving a
+// second time and risking a different answer.
+let solution = null;
+
+// The measurements in the shape the solver wants, skipping anything not filled
+// in yet. The index rides along so a residual can be traced back to a line.
+function measuredSwatches() {
+  const values = readMeasurements();
+  const out = [];
+  frozen.swatches.forEach(function (swatch, i) {
+    const used = usedMetres(values[i]);
+    if (used !== null && used > 0) out.push({ swatch: swatch, used: used, index: i });
+  });
+  return out;
+}
+
+function assumedSigma() {
+  return toMetres(num(calPrecisionInput), calUnitInput.value);
+}
+
+function solutionNote(text, className) {
+  const p = document.createElement("p");
+  p.className = className || "hint";
+  p.textContent = text;
+  solutionBox.appendChild(p);
+}
+
+function showSolution() {
+  solutionBox.textContent = "";
+  applyResult.textContent = "";
+  document.body.classList.remove("solved");
+  solution = null;
+
+  const unknowns = frozen.unknowns;
+  if (frozen.swatches.length === 0 || unknowns.length === 0) return;
+
+  const measured = measuredSwatches();
+  const short = unknowns.length - measured.length;
+  if (short > 0) {
+    // Not an error — just not finished. Saying how many more are needed beats
+    // silence, because the number is not obvious: it is one per unknown, and
+    // two of the unknowns were never asked for.
+    solutionNote(short + " more " + (short === 1 ? "swatch" : "swatches") +
+      " before there is enough to solve — one for each of the " +
+      unknowns.length + " figures being worked out.");
+    return;
+  }
+
+  const result = solveCalibration(measured, unknowns, { sigma: assumedSigma() });
+  if (!result.ok) {
+    solutionNote(result.reason);
+    return;
+  }
+
+  const unit = document.getElementById("typeUnit").value;
+  const table = document.createElement("div");
+  table.className = "solutionTable";
+
+  for (const name of unknowns) {
+    const bad = result.suspect.includes(name);
+
+    const label = document.createElement("span");
+    label.textContent = name;
+    const value = document.createElement("span");
+    value.className = "solutionValue";
+    value.textContent = calAmount(result.values[name], unit);
+    const spread = document.createElement("span");
+    spread.textContent = "± " + calAmount(result.uncertainty[name], unit);
+
+    if (bad) {
+      label.className = "short";
+      value.className += " short";
+      spread.className = "short";
+    }
+
+    table.appendChild(label);
+    table.appendChild(value);
+    table.appendChild(spread);
+  }
+  solutionBox.appendChild(table);
+
+  // How much the measurements disagree among themselves, which is a check on
+  // the precision claimed earlier — and the only independent check there is.
+  if (result.measuredNoise) {
+    const said = assumedSigma();
+    let text = "Your swatches disagree by about " +
+      calAmount(result.scatter, calUnitInput.value) + ", against the " +
+      calAmount(said, calUnitInput.value) + " you said you could measure to.";
+    if (said > 0 && result.scatter > said * 2) {
+      text += " Worse than expected — either something was mismeasured, or the " +
+              "tension varied between swatches.";
+    } else if (result.scatter < said) {
+      // The error bars above were worked out from the claimed precision, not
+      // from this — worth saying, because otherwise they look pessimistic.
+      text += " Closer than that is not something a handful of swatches can " +
+              "prove, so the figures above still allow for the tape.";
+    }
+    solutionNote(text);
+
+    // With spare swatches the fit can be checked against each one. A single
+    // wild residual is far more likely to be one bad swatch than a bad model,
+    // and re-measuring it is cheap next to re-knitting everything.
+    let worst = null;
+    result.residuals.forEach(function (r, i) {
+      if (!worst || Math.abs(r) > Math.abs(worst.residual)) {
+        worst = { residual: r, line: measured[i].index + 1 };
+      }
+    });
+    if (worst && result.sigma > 0 && Math.abs(worst.residual) > 3 * result.sigma) {
+      solutionNote("Swatch " + worst.line + " is " +
+        calAmount(worst.residual, calUnitInput.value) +
+        " away from what the others predict. Worth measuring again before " +
+        "trusting any of this.");
+    }
+  } else {
+    solutionNote("Exactly enough swatches to solve, so there is nothing left " +
+      "over to check them with — every measurement is taken at face value.");
+  }
+
+  if (result.suspect.length > 0) {
+    // Negative consumption is arithmetically fine and physically impossible.
+    // It means the fit went looking for cancellation, which is what happens
+    // when the swatches genuinely disagree.
+    solutionNote("Marked in red: a stitch cannot eat a negative length of " +
+      "yarn. The swatches disagree badly enough that the arithmetic has gone " +
+      "looking for cancellation, so none of these figures can be used.", "hint bad");
+    return;
+  }
+
+  solution = result;
+  document.body.classList.add("solved");
+}
+
+document.getElementById("applyCalibration").addEventListener("click", function () {
+  if (!solution) return;
+
+  const unit = document.getElementById("typeUnit").value;
+  const applied = [];
+
+  // Matched by name against the stitch table, which is what makes turn work
+  // without a special case — it is a row like any other.
+  for (const row of typeRows.querySelectorAll(".typeRow")) {
+    const name = row.querySelector(".typeName").value;
+    const value = solution.values[name];
+    if (value === undefined) continue;
+    row.querySelector(".typeAmount").value = Number(fromMetres(value, unit).toFixed(3));
+    applied.push(name);
+  }
+
+  const spare = frozen.unknowns.filter(function (name) {
+    return !applied.includes(name);
+  });
+
+  let text = applied.length === 0
+    ? "None of these have a row in the stitch table to write to."
+    : "Written into the stitch table: " + applied.join(", ") + ".";
+  if (spare.length > 0) {
+    // Nothing in the app spends yarn on casting on yet, so there is nowhere
+    // for the figure to go. It is not lost — it is solved again from the same
+    // measurements whenever this panel is opened.
+    text += " " + spare.join(", ") + " is measured but not yet used anywhere, " +
+            "so it has been left out.";
+  }
+  applyResult.textContent = text;
+
+  // Setting the boxes from code fires no events, so everything the table feeds
+  // has to be told by hand — the same hazard as restoring saved settings.
+  refreshTypeChoices();
+  refreshCalTypes();
+  updateAllRowCounts();
+  applyTemplate();
+  draw();
+  saveSoon();
+});
 
 function applyCalMethod() {
   document.body.classList.toggle("weighing", byWeight());
@@ -1031,7 +1222,9 @@ let previousCalUnit = calUnitInput.value;
 
 calUnitInput.addEventListener("change", function () {
   const unit = calUnitInput.value;
-  convertBoxes([calPrecisionInput, calTailInput], previousCalUnit, unit);
+  convertBoxes(
+    [calPrecisionInput, calTailStartInput, calTailEndInput], previousCalUnit, unit
+  );
   convertBoxes(weightRows.querySelectorAll(".weightLength"), previousCalUnit, unit);
   // While weighing, those boxes hold grams, which no change of length unit
   // touches.

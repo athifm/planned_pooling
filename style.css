@@ -706,6 +706,37 @@ body.weighing .weightBlock {
   color: #b3261e;
 }
 
+/* The answer. Values in a column so they can be read against each other, and
+   against the error bars beside them. */
+.solutionTable {
+  display: grid;
+  grid-template-columns: max-content max-content max-content;
+  gap: 0.25rem 0.9rem;
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0.8rem 0 0.5rem;
+}
+
+.solutionValue {
+  font-weight: 600;
+  color: #222;
+}
+
+.solutionTable .short,
+.hint.bad {
+  color: #b3261e;
+}
+
+/* Applying is the deliberate act, so the button is only there when there is
+   something safe to apply. */
+#applyCalibration {
+  display: none;
+}
+
+body.solved #applyCalibration {
+  display: inline-block;
+}
+
 /* Header and rows share one column template so the headings line up with
    the boxes they name. */
 /* The length column is sized by its heading, not by the numbers — band lengths

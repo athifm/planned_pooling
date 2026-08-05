@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 12;
+const SETTINGS_VERSION = 13;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -88,7 +88,10 @@ const DEFAULT_SETTINGS = {
   calMeasured: [],
   calMethod: "length",
   calWeights: [],
-  calTail: 15,
+  // Kept apart because they rarely match: the cast-on tail is whatever was
+  // guessed at the start, the bind-off tail is whatever happened to be left.
+  calTailStart: 15,
+  calTailEnd: 15,
 
   useTemplate: false,
   // 1 + 23 x 6 + 1 = 140 stitches, matching the default count. Two rows so the
@@ -167,7 +170,8 @@ function readSettings() {
     calMeasured: readMeasurements(),
     calMethod: document.querySelector("input[name=calMethod]:checked").value,
     calWeights: readWeightPairs(),
-    calTail: fieldNumber("calTail"),
+    calTailStart: fieldNumber("calTailStart"),
+    calTailEnd: fieldNumber("calTailEnd"),
     useTemplate: document.getElementById("useTemplate").checked,
     template: readTemplateRows(),
   };
@@ -225,7 +229,8 @@ function applySettings(s) {
     "input[name=calMethod][value=" + s.calMethod + "]"
   ).checked = true;
   setWeightRows(s.calWeights);
-  document.getElementById("calTail").value = s.calTail;
+  document.getElementById("calTailStart").value = s.calTailStart;
+  document.getElementById("calTailEnd").value = s.calTailEnd;
   restorePrescription(s.calSwatches, s.calUnknowns, s.calMeasured);
 
   document.getElementById("useTurning").checked = s.useTurning;

@@ -325,17 +325,26 @@
       </div>
 
       <div class="fields">
-        <label for="calTail">Tail left at each end (<span class="unitTag"></span>)</label>
-        <input type="number" id="calTail" value="15" step="1" min="0">
+        <label for="calTailStart">Tail at the cast-on end (<span class="unitTag"></span>)</label>
+        <input type="number" id="calTailStart" value="15" step="1" min="0">
+
+        <label for="calTailEnd">Tail at the bind-off end</label>
+        <input type="number" id="calTailEnd" value="15" step="1" min="0">
       </div>
 
       <p class="hint">
-        Both tails come off every measurement — they are yarn you held, not
-        yarn the fabric ate.
+        Both come off every measurement — they are yarn you held, not yarn the
+        fabric ate. They are asked for separately because they rarely match:
+        the cast-on tail is whatever you guessed at the start, the bind-off
+        tail is whatever was left.
       </p>
 
       <div id="measureRows"></div>
       <p class="hint" id="measureResult"></p>
+
+      <div id="solution"></div>
+      <button type="button" id="applyCalibration">Use these figures</button>
+      <p class="hint" id="applyResult"></p>
     </fieldset>
 
     <fieldset class="advancedOnly">

@@ -151,6 +151,19 @@ check("every consumption comes back to within 1e-9",
   unknowns.every(function (n) { return close(clean.values[n], truth[n], 1e-9); }),
   unknowns.map(function (n) { return n + "=" + clean.values[n].toFixed(9); }).join(" "));
 check("nothing is flagged suspect", clean.suspect.length === 0);
+check("perfect data reports no disagreement", close(clean.scatter, 0, 1e-9),
+  String(clean.scatter));
+// Error bars of zero would be a lie told confidently: a few swatches agreeing
+// is a small sample, not proof the tape is perfect.
+check("but the error bars still allow for the tape",
+  clean.sigma === DEFAULT_SIGMA && clean.uncertainty.knit > 0,
+  clean.sigma + " / " + clean.uncertainty.knit);
+
+const exactCount = solveCalibration(
+  shapes.slice(0, 5).map(function (s) { return fabricate(s, 0); }), unknowns
+);
+check("with nothing spare there is no disagreement to report",
+  exactCount.ok && exactCount.scatter === null && exactCount.measuredNoise === false);
 
 group("designs that cannot work are refused");
 
@@ -187,6 +200,7 @@ const predicted = uncertainties(
 const trials = 2000;
 const sums = unknowns.map(function () { return 0; });
 const squares = unknowns.map(function () { return 0; });
+let scatterTotal = 0;
 
 for (let t = 0; t < trials; t++) {
   const result = solveCalibration(
@@ -197,6 +211,7 @@ for (let t = 0; t < trials; t++) {
     sums[i] += error;
     squares[i] += error * error;
   });
+  scatterTotal += result.scatter;
 }
 
 let allMatch = true;
@@ -213,6 +228,14 @@ unknowns.forEach(function (name, i) {
     "  ratio " + ratio.toFixed(3), "note");
 });
 check("the simulated spread matches the prediction, and the fit is unbiased", allMatch);
+
+// The reported disagreement is what tells a knitter whether their measuring
+// was as good as they thought, so it has to recover the noise that is really
+// there rather than whatever the tape was claimed to do.
+const meanScatter = scatterTotal / trials;
+check("the reported disagreement recovers the real measurement noise",
+  meanScatter > sigma * 0.7 && meanScatter < sigma * 1.1,
+  (meanScatter * 100).toFixed(4) + "cm against " + (sigma * 100).toFixed(4) + "cm");
 
 // --- weighing instead of measuring ------------------------------------------
 

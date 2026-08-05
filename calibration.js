@@ -273,15 +273,24 @@ function solveCalibration(measured, unknowns, options) {
     return b[r] - predicted;
   });
 
-  // With spare swatches the data reports its own noise, which is better than
-  // any figure guessed in advance. With none to spare there is nothing to
-  // measure it from, and the assumed value has to stand.
+  // With spare swatches the data reports its own noise, which beats any figure
+  // guessed in advance. With none to spare there is nothing to measure it
+  // from, and the assumed value has to stand.
   const spare = measured.length - unknowns.length;
-  let sigma = opts.sigma || DEFAULT_SIGMA;
+  const claimed = opts.sigma || DEFAULT_SIGMA;
+  let scatter = null;
+  let sigma = claimed;
+
   if (spare > 0) {
     let ss = 0;
     for (const r of residuals) ss += r * r;
-    sigma = Math.sqrt(ss / spare);
+    scatter = Math.sqrt(ss / spare);
+    // Never claim to be more precise than the measuring was. Two or three
+    // swatches that happen to agree is a small sample, not proof the tape is
+    // perfect, and error bars of zero would be a lie told confidently. The raw
+    // scatter is reported separately, so a set that disagrees more than
+    // expected still says so.
+    sigma = Math.max(scatter, claimed);
   }
 
   const spread = uncertainties(A, sigma, opts.ridge || 0);
@@ -298,7 +307,12 @@ function solveCalibration(measured, unknowns, options) {
     values: values,
     uncertainty: error,
     residuals: residuals,
+    // What the error bars were computed with, and what the swatches actually
+    // disagreed by. They differ whenever the measurements came out tidier than
+    // the tape can justify. Null scatter means there was nothing spare to
+    // measure it from.
     sigma: sigma,
+    scatter: scatter,
     measuredNoise: spare > 0,
     // A negative consumption is arithmetically fine and physically nonsense.
     // It means the swatches disagree badly enough that the fit has gone
