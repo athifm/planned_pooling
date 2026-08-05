@@ -78,7 +78,7 @@ function addColorRow(color, length, fade) {
       // a plain fraction of its width.
       const fraction = Math.min(Math.max((clientX - box.left) / box.width, 0), 1);
       setFade(band - fraction * band);
-      draw();
+      regenerate();
     }
 
     function onMove(ev) { moveTo(ev.clientX); }
@@ -133,10 +133,12 @@ function addColorRow(color, length, fade) {
     setFade(band - begins, begins === typed);
   });
 
+  // The panel's own input listener redraws for any range control, so this only
+  // has to move the value. The pin above is not an input at all, which is why
+  // that one still asks for itself.
   fadeSlider.addEventListener("input", function () {
     const band = Number(len.value) || 0;
     setFade(band - (Number(fadeSlider.value) / 1000) * band);
-    draw();
   });
 
   // A longer band moves the fade's starting point, but not its length.
@@ -151,7 +153,7 @@ function addColorRow(color, length, fade) {
     // A yarn with no colors makes no sense — always keep one row.
     if (colorRows.children.length > 1) {
       row.remove();
-      draw();   // defined in app.js, which loads after this file
+      regenerate();
     }
   });
 
@@ -319,7 +321,7 @@ function addTypeRow(name, code, perStitch) {
       refreshTypeChoices();
       refreshCalTypes();
       updateAllRowCounts();
-      draw();
+      regenerate();
     }
   });
 
@@ -733,7 +735,7 @@ function addTemplateCell(rowEl, value) {
         ensureTrailingCell(rowEl);
         if (cell.nextElementSibling) cell.nextElementSibling.focus();
       }
-      applyTemplate();
+      regenerate();
       return;
     }
 
@@ -746,7 +748,7 @@ function addTemplateCell(rowEl, value) {
         previous.setSelectionRange(previous.value.length, previous.value.length);
         updateRowCounts(rowEl);
         updateRowTotals();
-        applyTemplate();
+        regenerate();
       }
     }
   });
@@ -854,7 +856,7 @@ function addTemplateRow(row) {
       // Removing a row can leave a later "end" with nothing open above it.
       updateRepeatAvailability();
       updateRowTotals();
-      applyTemplate();
+      regenerate();
     }
   });
 
@@ -1005,7 +1007,7 @@ document.getElementById("addTemplateRow").addEventListener("click", function () 
   // A new row may be the first place an open repeat can be closed.
   updateRepeatAvailability();
   updateRowTotals();
-  applyTemplate();
+  regenerate();
 });
 
 // Read the rows back off the page as [{ color, length }, ...].

@@ -352,7 +352,7 @@ function draw() {
 
   if (effective.template) {
     const template = currentTemplate();
-    // A broken template is reported next to the boxes by applyTemplate();
+    // A broken template is reported next to the boxes by syncTemplateState();
     // there is nothing sensible to draw until it is fixed.
     if (template.error) return;
     consumptionAt = blockConsumption(
@@ -580,38 +580,21 @@ makeResizeHandle(document.getElementById("handleCorner"), "both");
 
 new ResizeObserver(function () {
   if (programmaticResize) {
+    // We caused this by sizing the box from the counts, so the counts are
+    // already right and reading them back could land one off what was typed.
     programmaticResize = false;
+    regenerate({ sizeFrom: "none" });
   } else {
-    countsFromWrapper();
+    regenerate({ sizeFrom: "pixels" });
   }
-  resizeCanvasToWrapper();
-  draw();
 }).observe(canvasWrap);
 
-// "change" fires on Enter or when the box loses focus — not on every
-// keystroke, which would redraw a 1-stitch fabric while you type "140".
-for (const input of [stitchesInput, rowsInput, stitchWidthInput, rowHeightInput]) {
-  input.addEventListener("change", function () {
-    sizeWrapperFromCounts();
-    resizeCanvasToWrapper();
-    draw();
-  });
-}
-
-perStitchInput.addEventListener("change", draw);
-constructionSet.addEventListener("change", draw);
-
 // Switching mode changes which controls are visible AND which are in force,
-// so both have to happen together — see inEffect().
+// so both have to happen together — see inEffect(). Only the visibility part
+// lives here; the change event bubbles on to the panel listener, which does
+// the regenerating for every control alike.
 function applyMode() {
   document.body.classList.toggle("advanced", isAdvanced());
-  // Leaving advanced mode also turns any template off, so this has to run
-  // first — it decides what the stitch count is.
-  applyTemplate();
-  // Zoom may have just come into or out of force, changing the cell size.
-  sizeWrapperFromCounts();
-  resizeCanvasToWrapper();
-  draw();
 }
 
 // The size the user had before a template took the boxes over, so turning the
@@ -635,7 +618,10 @@ function updateTemplateMessage() {
   return template;
 }
 
-function applyTemplate() {
+// What the template does to the rest of the form: locks the count boxes, or
+// gives them back. State only — no sizing and no drawing, so regenerate() can
+// call it first and then do those once for everybody.
+function syncTemplateState() {
   const active = templateActive();
 
   // A template states the fabric's size in both directions, so neither box is
@@ -650,9 +636,6 @@ function applyTemplate() {
       stitchesInput.value = sizeBeforeTemplate.stitches;
       rowsInput.value = sizeBeforeTemplate.rows;
       sizeBeforeTemplate = null;
-      sizeWrapperFromCounts();
-      resizeCanvasToWrapper();
-      draw();
     }
     return;
   }
@@ -666,13 +649,35 @@ function applyTemplate() {
 
   stitchesInput.value = template.stitches;
   rowsInput.value = template.rows.length;
-  sizeWrapperFromCounts();
+}
+
+// The one way anything reaches the fabric.
+//
+// Every control used to carry its own list of follow-up steps, and some needed
+// more than others — a gauge change has to resize the canvas box, a template
+// change has to derive the counts first. Forgetting either when adding a
+// control produced a fabric that was quietly out of date, and the list of
+// controls only grows. So there is one path now, it always does everything,
+// and a new control is covered the moment it exists.
+//
+// sizeFrom says where the fabric's size comes from on this pass:
+//   "counts"  the boxes are right and the canvas should follow them
+//   "pixels"  the box was dragged and the counts should follow it
+//   "none"    neither moved, so touch neither
+function regenerate(options) {
+  const sizeFrom = (options && options.sizeFrom) || "counts";
+
+  // First, because it decides what the counts are.
+  syncTemplateState();
+
+  if (sizeFrom === "counts") sizeWrapperFromCounts();
+  else if (sizeFrom === "pixels") countsFromWrapper();
+
   resizeCanvasToWrapper();
   draw();
 }
 
 modeSet.addEventListener("change", applyMode);
-zoomInput.addEventListener("change", applyMode);
 // Reporting a join. Clicking is the quick way in; the boxes make it exact and
 // let you say "row 20, stitch 87" without hunting for a 5px cell.
 canvas.addEventListener("click", function (e) {
@@ -689,20 +694,15 @@ canvas.addEventListener("click", function (e) {
   const k = stitchAt(row, col, stitches, isCircular());
   joinRowInput.value = Math.floor(k / stitches) + 1;
   joinStitchInput.value = (k % stitches) + 1;
-  draw();
+  // The canvas is outside the panel, so this one has to ask for itself.
+  regenerate();
 });
 
 document.getElementById("clearJoin").addEventListener("click", function () {
   joinRowInput.value = "";
   joinStitchInput.value = "";
-  draw();
+  regenerate();
 });
-
-for (const input of [joinRowInput, joinStitchInput, skeinLengthInput, tailInput]) {
-  input.addEventListener("change", draw);
-}
-
-document.getElementById("useTurning").addEventListener("change", draw);
 
 // Picking a method fills in what it costs. The figures are rough, so the box
 // stays editable — and editing it moves the method to "measured myself", so a
@@ -710,9 +710,10 @@ document.getElementById("useTurning").addEventListener("change", draw);
 castOnMethodInput.addEventListener("change", function () {
   const method = castOnMethod(castOnMethodInput.value);
   if (method.perStitch !== null) {
-    castOnInput.value = Number(fromMetres(toMetres(method.perStitch, "cm"), castOnUnitInput.value).toFixed(3));
+    castOnInput.value = Number(
+      fromMetres(toMetres(method.perStitch, "cm"), castOnUnitInput.value).toFixed(3)
+    );
   }
-  draw();
 });
 
 castOnInput.addEventListener("change", function () {
@@ -721,7 +722,6 @@ castOnInput.addEventListener("change", function () {
   if (method.perStitch !== null && Math.abs(typed - toMetres(method.perStitch, "cm")) > 1e-9) {
     castOnMethodInput.value = "other";
   }
-  draw();
 });
 
 let previousCastOnUnit = castOnUnitInput.value;
@@ -730,10 +730,7 @@ castOnUnitInput.addEventListener("change", function () {
   const unit = castOnUnitInput.value;
   convertBoxes([castOnInput], previousCastOnUnit, unit);
   previousCastOnUnit = unit;
-  draw();
 });
-document.getElementById("useTemplate").addEventListener("change", applyTemplate);
-document.getElementById("templateRows").addEventListener("change", applyTemplate);
 
 // Gauge from a knitted sample. The millimetre boxes stay the source of truth;
 // this only fills them in, so the arithmetic stays visible rather than hidden.
@@ -765,10 +762,9 @@ document.getElementById("applySwatch").addEventListener("click", function () {
     "Gauge set to " + stitchWidth.toFixed(2) + " " + gaugeUnit + " per stitch, " +
     rowHeight.toFixed(2) + " " + gaugeUnit + " per row.";
 
-  // Cell size changed, so the canvas box has to change with it.
-  sizeWrapperFromCounts();
-  resizeCanvasToWrapper();
-  draw();
+  // A click, not a change, so it asks for itself — and the cell size just
+  // moved, which regenerate() takes care of along with everything else.
+  regenerate();
 });
 
 // --- Calibration ------------------------------------------------------------
@@ -1293,9 +1289,7 @@ document.getElementById("applyCalibration").addEventListener("click", function (
   refreshTypeChoices();
   refreshCalTypes();
   updateAllRowCounts();
-  applyTemplate();
-  draw();
-  saveSoon();
+  regenerate();
 });
 
 function applyCalMethod() {
@@ -1355,10 +1349,6 @@ calUnitInput.addEventListener("change", function () {
   // runs after this one and finds the boxes already converted.
 });
 
-// change bubbles, so one listener on the container covers every color row,
-// including rows added later.
-colorRows.addEventListener("change", draw);
-
 // Switching units should describe the same physical length, not silently
 // redefine it — so convert what is already typed rather than reinterpreting it.
 function convertBoxes(boxes, from, to) {
@@ -1383,7 +1373,6 @@ lengthUnitInput.addEventListener("change", function () {
   convertFades(previousLengthUnit, unit);
   resyncFadeSliders();
   previousLengthUnit = unit;
-  draw();
 });
 
 // Fades are a property of the yarn, so they are offered in both modes — but
@@ -1395,7 +1384,6 @@ function applyFades() {
   // Track widths are zero while the controls are hidden, so the labels can
   // only be placed once the class has made them visible.
   refreshFadeVisuals();
-  draw();
 }
 
 useFadesInput.addEventListener("change", applyFades);
@@ -1410,7 +1398,7 @@ document.getElementById("applyFadeAll").addEventListener("click", function () {
   // having is "all my transitions are about this long", not "they all start
   // at the same point", which would mean different things per band.
   setFadeOnAllRows(value);
-  draw();
+  regenerate();
 });
 
 let previousPerStitchUnit = perStitchUnitInput.value;
@@ -1419,7 +1407,6 @@ perStitchUnitInput.addEventListener("change", function () {
   const unit = perStitchUnitInput.value;
   convertBoxes([perStitchInput], previousPerStitchUnit, unit);
   previousPerStitchUnit = unit;
-  draw();
 });
 
 // Gauge boxes: converting them keeps the fabric the same size on screen, so
@@ -1430,7 +1417,6 @@ gaugeUnitInput.addEventListener("change", function () {
   const unit = gaugeUnitInput.value;
   convertBoxes([stitchWidthInput, rowHeightInput], previousGaugeUnit, unit);
   previousGaugeUnit = unit;
-  draw();
 });
 
 // The swatch boxes feed nothing until "Use this gauge" is pressed, so
@@ -1445,7 +1431,8 @@ swatchUnitInput.addEventListener("change", function () {
   );
   previousSwatchUnit = unit;
 });
-document.getElementById("addColor").addEventListener("click", draw);
+
+document.getElementById("addColor").addEventListener("click", regenerate);
 
 // Stitch types. Renaming one changes what the "stitch used" dropdown offers,
 // so the list is rebuilt on any change inside the table.
@@ -1459,7 +1446,6 @@ typeUnitInput.addEventListener("change", function () {
   // Converting leaves every consumption the same physical length, so the plan
   // does not change — but it is reported in this unit, so it has to be redrawn.
   refreshPrescription();
-  draw();
 });
 
 typeRows.addEventListener("change", function () {
@@ -1470,20 +1456,40 @@ typeRows.addEventListener("change", function () {
   refreshPrescription();
   // A code may have changed, which changes what every existing token means.
   updateAllRowCounts();
-  applyTemplate();
-  draw();
 });
 
-document.getElementById("activeType").addEventListener("change", draw);
 document.getElementById("addType").addEventListener("click", function () {
   refreshPrescription();
-  draw();
+  regenerate();
 });
 
-// Anything changing anywhere in the controls is worth saving. "change" bubbles,
-// so one listener covers every input and select in the panel, including colour
-// rows added later. Dragging a grip is covered by the saveSoon() inside draw().
-document.querySelector(".panel").addEventListener("change", saveSoon);
+// --- The one way in ---------------------------------------------------------
+//
+// Everything above this line only prepares: converts a unit, rebuilds a
+// dependent list, toggles a body class. None of them redraw. The event then
+// bubbles to here, and this regenerates once — so a control added tomorrow is
+// covered without anyone remembering to wire it up.
+//
+// Buttons are the exception, because a click is not a change; each one asks
+// for itself, and they are few.
+//
+// Listening on the page rather than the panel: the stitch and row boxes sit
+// beside the fabric, not among the controls, and delegating to the panel
+// quietly missed them. One container that holds everything is the only version
+// of this that cannot have a hole in it.
+pageBox.addEventListener("change", function () {
+  regenerate();
+  saveSoon();
+});
+
+// Typed boxes wait for Enter or blur — redrawing a 1-stitch fabric while
+// someone types "140" is no use to anyone. A slider is different: every
+// position it passes through is a value that was meant, so it updates live.
+pageBox.addEventListener("input", function (e) {
+  if (e.target.type !== "range") return;
+  regenerate();
+  saveSoon();
+});
 
 // Each unit dropdown remembers what it was showing, so it can convert from the
 // old unit to the new one. Restoring saved settings changes those dropdowns
@@ -1511,10 +1517,7 @@ updateCalUnitTags();
 showConversion();
 updateMeasurementReadout();
 refreshFadeVisuals();
-applyTemplate();
 
-sizeWrapperFromCounts();
-resizeCanvasToWrapper();
-draw();
+regenerate();
 
 console.log("app.js loaded");
