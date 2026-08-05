@@ -67,6 +67,31 @@ function updateTurningNote(turnMetres, rows) {
     total.toFixed(2) + " m over " + rows + " rows.";
 }
 
+// Casting on and binding off are charged once per stitch cast on, so the whole
+// allowance lands in one lump rather than accumulating down the fabric.
+function updateSetupNote(setupMetres, stitches) {
+  const note = document.getElementById("setupNote");
+
+  if (!isAdvanced() || setupMetres <= 0) {
+    note.textContent = "";
+    return;
+  }
+
+  const unit = document.getElementById("typeUnit").value;
+  const each = fromMetres(setupMetres, unit);
+  const total = setupMetres * stitches;
+
+  // Said plainly because the fabric does not move when this is switched on,
+  // and a figure that changes the total without changing the picture looks
+  // like a bug otherwise. Where in the yarn you begin is your choice; the
+  // pattern is measured from the first stitch, not from the cast-on.
+  note.textContent =
+    "Adding " + each.toFixed(2) + " " + unit + " per stitch cast on, " +
+    total.toFixed(2) + " m over " + stitches + " stitches. This changes how " +
+    "much yarn you need, not where the colors fall — the pattern is measured " +
+    "from the first stitch.";
+}
+
 function templateActive() {
   return isAdvanced() && document.getElementById("useTemplate").checked;
 }
@@ -74,6 +99,11 @@ function templateActive() {
 function turningActive() {
   // Knitting in the round never turns the work, so there is nothing to charge.
   return isAdvanced() && document.getElementById("useTurning").checked && !isCircular();
+}
+
+function setupActive() {
+  // Every fabric is cast on, flat or round alike.
+  return isAdvanced() && document.getElementById("useSetup").checked;
 }
 
 function inEffect() {
@@ -85,6 +115,7 @@ function inEffect() {
       : toMetres(num(perStitchInput), perStitchUnitInput.value),
     template: templateActive(),
     turnMetres: turningActive() ? typeMetresByName()[TURN_TYPE_NAME] || 0 : 0,
+    setupMetres: setupActive() ? typeMetresByName()[SETUP_TYPE_NAME] || 0 : 0,
   };
 }
 
@@ -300,8 +331,15 @@ function draw() {
     grid, canvas.width / stitches, canvas.height / rows, seams, boundary
   );
 
+  // Spent before the first stitch and after the last, so it is added to the
+  // total rather than fed through layer 3 — it occupies no cell, and moving
+  // the whole pattern by it would assume a cast-on that eats working yarn.
+  // A long-tail cast-on takes its yarn from the other end and moves nothing.
+  const setupTotal = effective.setupMetres * stitches;
+
   showYarnNeeded(
-    consumedThrough(stitches * rows - 1, stitches, consumptionAt, effective.turnMetres),
+    consumedThrough(stitches * rows - 1, stitches, consumptionAt, effective.turnMetres) +
+      setupTotal,
     sequence
   );
   showJoinAdvice(
@@ -314,6 +352,7 @@ function draw() {
   // Knitted in the round the fabric is a tube, so its width measurement is
   // the way round it, not the way across it.
   updateTurningNote(effective.turnMetres, rows);
+  updateSetupNote(effective.setupMetres, stitches);
 
   const gauge = gaugeMm();
   const size = fabricSize(stitches, rows, gauge.stitchWidth, gauge.rowHeight);
@@ -618,6 +657,7 @@ for (const input of [joinRowInput, joinStitchInput, skeinLengthInput, tailInput]
 }
 
 document.getElementById("useTurning").addEventListener("change", draw);
+document.getElementById("useSetup").addEventListener("change", draw);
 document.getElementById("useTemplate").addEventListener("change", applyTemplate);
 document.getElementById("templateRows").addEventListener("change", applyTemplate);
 
@@ -693,6 +733,7 @@ function calibrationRequest() {
     // The targets are a percentage of what the app currently believes, so
     // calibration is always asked to improve on the figure it is replacing.
     turnCurrent: current[TURN_TYPE_NAME],
+    setupCurrent: current[SETUP_TYPE_NAME],
   };
 }
 

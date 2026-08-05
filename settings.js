@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 13;
+const SETTINGS_VERSION = 14;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -62,10 +62,15 @@ const DEFAULT_SETTINGS = {
     // Not a stitch: yarn spent turning the work. Occupies no place in the
     // fabric, so it is charged per row rather than per stitch.
     { name: "turn", code: "t", perStitch: 1 },
+    // Also not a stitch: casting on and binding off, charged once per stitch
+    // cast on. One figure for both, because no swatch can tell them apart —
+    // every swatch contains S x castOn + S x bindOff, which is S x their sum.
+    { name: "setup", code: "", perStitch: 3 },
   ],
   typeUnit: "cm",
   activeType: "knit",
   useTurning: false,
+  useSetup: false,
 
   // Which stitches to work out real figures for. "carried" means the stitch
   // cannot make a fabric on its own, so it has to share a swatch with one that
@@ -160,6 +165,7 @@ function readSettings() {
     typeUnit: fieldValue("typeUnit"),
     activeType: fieldValue("activeType"),
     useTurning: document.getElementById("useTurning").checked,
+    useSetup: document.getElementById("useSetup").checked,
     calTypes: readCalTypes(),
     calConstruction: document.querySelector("input[name=calConstruction]:checked").value,
     calBudget: fieldNumber("calBudget"),
@@ -234,6 +240,7 @@ function applySettings(s) {
   restorePrescription(s.calSwatches, s.calUnknowns, s.calMeasured);
 
   document.getElementById("useTurning").checked = s.useTurning;
+  document.getElementById("useSetup").checked = s.useSetup;
   document.getElementById("useTemplate").checked = s.useTemplate;
   setTemplateRows(s.template);
 }
