@@ -20,6 +20,7 @@ const joinRowInput    = document.getElementById("joinRow");
 const joinStitchInput = document.getElementById("joinStitch");
 const joinAdvice      = document.getElementById("joinAdvice");
 const tailInput       = document.getElementById("tail");
+const staleBadge      = document.getElementById("staleBadge");
 const canvasWrap      = document.getElementById("canvasWrap");
 const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
@@ -216,6 +217,33 @@ function cellSize() {
 // Row and stitch are given the way a pattern reads them: both 1-based, and the
 // stitch is the nth worked in that row, not a column — on a reversed row those
 // are different things.
+// Why a reported join is not being shown, or null if there is nothing to say.
+//
+// Not a blocking problem — the fabric is perfectly drawable — but the marker
+// silently vanishing when you type row 999 is no more helpful than a stale
+// picture would be. Empty boxes are not a mistake; half-filled or out of range
+// is.
+function joinComplaint(stitches, rows) {
+  const row = joinRowInput.value.trim();
+  const stitch = joinStitchInput.value.trim();
+
+  if (row === "" && stitch === "") return null;
+  if (row === "" || stitch === "") return "Needs both a row and a stitch.";
+
+  const r = Number(row);
+  const s = Number(stitch);
+  if (!Number.isFinite(r) || !Number.isFinite(s)) {
+    return "Row and stitch both have to be numbers.";
+  }
+  if (r < 1 || r > rows) {
+    return "Row " + r + " is outside this fabric, which has " + rows + ".";
+  }
+  if (s < 1 || s > stitches) {
+    return "Stitch " + s + " is outside a row of " + stitches + ".";
+  }
+  return null;
+}
+
 function reportedJoin(stitches, rows) {
   const row = num(joinRowInput);
   const stitch = num(joinStitchInput);
@@ -253,8 +281,14 @@ function say(parent, text) {
 // Where to begin the next ball, given as both landmarks — a new ball can start
 // anywhere in the repeat, so there is no knowing which of the two is in front
 // of the knitter.
-function showJoinAdvice(sequence, usedMetres) {
+function showJoinAdvice(sequence, usedMetres, complaint) {
   joinAdvice.textContent = "";
+  joinAdvice.classList.toggle("bad", Boolean(complaint));
+
+  if (complaint) {
+    joinAdvice.textContent = complaint;
+    return;
+  }
   if (usedMetres === null) return;
 
   const spot = landmarkFor(sequence, usedMetres);
@@ -392,7 +426,8 @@ function draw() {
     join === null
       ? null
       : startMetres +
-        consumedThrough(join, stitches, consumptionAt, effective.turnMetres)
+        consumedThrough(join, stitches, consumptionAt, effective.turnMetres),
+    joinComplaint(stitches, rows)
   );
 
   // Knitted in the round the fabric is a tube, so its width measurement is
@@ -651,6 +686,112 @@ function syncTemplateState() {
   rowsInput.value = template.rows.length;
 }
 
+// Everything that would stop the fabric being drawn, found in one pass.
+//
+// Blocking only. These are the cases where draw() has nothing to paint, which
+// is precisely what used to leave the previous fabric on screen with nothing
+// marking it stale. Problems that merely make a fabric incomplete — a
+// half-filled swatch, a template whose rows disagree — are reported by the
+// panel that owns them, in its own words, beside the control concerned.
+function problems() {
+  const found = [];
+  function bad(element, message) {
+    found.push({ element: element, message: message });
+  }
+
+  // Number("") is 0 and Number("abc") is NaN, and NaN fails every comparison —
+  // so this has to test for finiteness rather than assume a "< 1" catches it.
+  const stitches = num(stitchesInput);
+  const rows = num(rowsInput);
+  if (!Number.isFinite(stitches) || stitches < 1) {
+    bad(stitchesInput, "Needs to be at least 1.");
+  }
+  if (!Number.isFinite(rows) || rows < 1) {
+    bad(rowsInput, "Needs to be at least 1.");
+  }
+
+  // A stitch of no width gives a fabric of no size, and dividing the canvas
+  // by it produces an infinite number of columns.
+  if (!(num(stitchWidthInput) > 0)) {
+    bad(stitchWidthInput, "A stitch has to have a width.");
+  }
+  if (!(num(rowHeightInput) > 0)) {
+    bad(rowHeightInput, "A row has to have a height.");
+  }
+
+  if (isAdvanced() && !(num(zoomInput) > 0)) {
+    bad(zoomInput, "Needs to be more than zero.");
+  }
+
+  // Yarn with no length has no colour anywhere: colorAt divides by the repeat.
+  for (const row of colorRows.querySelectorAll(".colorRow")) {
+    const box = row.querySelector(".length");
+    if (!(Number(box.value) > 0)) bad(box, "Every color needs a length.");
+  }
+
+  // A stitch that eats no yarn never advances along the ball, so every stitch
+  // after it would come out the same colour. Turn and setup may legitimately
+  // be zero — they are allowances, not stitches.
+  if (isAdvanced()) {
+    for (const row of typeRows.querySelectorAll(".typeRow")) {
+      const type = {
+        name: row.querySelector(".typeName").value,
+        code: row.querySelector(".typeCode").value,
+      };
+      if (isNotAStitch(type)) continue;
+      const box = row.querySelector(".typeAmount");
+      if (!(Number(box.value) > 0)) bad(box, "A stitch has to use some yarn.");
+    }
+  } else if (!(num(perStitchInput) > 0)) {
+    bad(perStitchInput, "A stitch has to use some yarn.");
+  }
+
+  // The template states the whole fabric, so if it cannot be read there is no
+  // fabric. Its own message box already says what is wrong with it in detail.
+  if (templateActive() && currentTemplate().error) {
+    bad(document.getElementById("useTemplate"), "The template below cannot be read.");
+  }
+
+  return found;
+}
+
+// Mark what is wrong and where, then let the canvas say that something is.
+//
+// Both, deliberately: the mark beside the control says where, and the canvas
+// says that — which is the half you need when the panel is scrolled away from
+// the offending box.
+function showProblems(found) {
+  for (const marked of document.querySelectorAll(".problem")) {
+    marked.classList.remove("problem");
+  }
+  for (const note of document.querySelectorAll(".problemNote")) note.remove();
+
+  document.body.classList.toggle("invalid", found.length > 0);
+
+  for (const problem of found) {
+    if (!problem.element) continue;
+    problem.element.classList.add("problem");
+
+    // Hung on the nearest container that lays its children out in a row, so
+    // the note can span it rather than being squeezed into a grid column.
+    const host = problem.element.closest(
+      ".fields, .colorRow, .typeRow, .dimension, fieldset"
+    );
+    if (!host) continue;
+
+    const note = document.createElement("p");
+    note.className = "problemNote";
+    note.textContent = problem.message;
+    host.appendChild(note);
+  }
+
+  staleBadge.textContent = found.length === 0
+    ? ""
+    : found.length === 1
+      ? "Out of date — one thing needs fixing"
+      : "Out of date — " + found.length + " things need fixing";
+}
+
 // The one way anything reaches the fabric.
 //
 // Every control used to carry its own list of follow-up steps, and some needed
@@ -669,6 +810,15 @@ function regenerate(options) {
 
   // First, because it decides what the counts are.
   syncTemplateState();
+
+  const found = problems();
+  showProblems(found);
+
+  // Stop before touching the canvas, not after. Resizing its bitmap wipes it,
+  // so anything past this point would leave an empty box rather than the last
+  // fabric that made sense — and that fabric is what you were comparing
+  // against when you started typing.
+  if (found.length > 0) return;
 
   if (sizeFrom === "counts") sizeWrapperFromCounts();
   else if (sizeFrom === "pixels") countsFromWrapper();
