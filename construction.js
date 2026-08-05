@@ -30,6 +30,11 @@ function stitchAt(row, col, stitchesPerRow, circular) {
 
 // Yarn used through stitch k inclusive, turns included. The same walk buildGrid
 // does, so the two cannot disagree about what a fabric costs.
+//
+// The stitches only. Whatever went on the needles before the first one is the
+// caller's to add, because the two answers it feeds want different things: a
+// yarn total wants casting on and binding off both, while a position in the
+// ball wants only what came before this point.
 function consumedThrough(k, stitchesPerRow, consumptionAt, extraPerRow) {
   const UM = 1000000;
   const extraUm = Math.round((extraPerRow || 0) * UM);
@@ -49,7 +54,12 @@ function consumedThrough(k, stitchesPerRow, consumptionAt, extraPerRow) {
 // turning the work in flat knitting. It is charged between rows rather than at
 // a stitch, because a turn occupies no place in the fabric: it moves the yarn
 // on without adding a column.
-function buildGrid(sequence, stitchesPerRow, rows, consumptionAt, circular, extraPerRow){
+//
+// startMetres is yarn already gone before the first stitch — the cast-on. It
+// comes off the ball like everything else, so the whole pattern begins that
+// far in. Passed as a starting position rather than folded into the first
+// stitch, because it belongs to no stitch and must not colour one.
+function buildGrid(sequence, stitchesPerRow, rows, consumptionAt, circular, extraPerRow, startMetres){
 
 const grid = [];
 for (let r = 0; r < rows; r++) {
@@ -72,7 +82,7 @@ const sequenceUm = sequence.map(function (band) {
 
 const extraUm = Math.round((extraPerRow || 0) * UM);
 
-let used = 0
+let used = Math.round((startMetres || 0) * UM)
 for (let k = 0; k < stitchesPerRow * rows; k++) {
   let pos = cellOf(k, stitchesPerRow, circular)
   // Round each stitch to whole micrometres before adding it on, so the total

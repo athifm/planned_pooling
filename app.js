@@ -23,6 +23,9 @@ const tailInput       = document.getElementById("tail");
 const canvasWrap      = document.getElementById("canvasWrap");
 const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
+const castOnMethodInput = document.getElementById("castOnMethod");
+const castOnInput = document.getElementById("castOnPerStitch");
+const castOnUnitInput = document.getElementById("castOnUnit");
 const stitchesLabel   = document.getElementById("stitchesLabel");
 
 function isCircular() {
@@ -67,29 +70,49 @@ function updateTurningNote(turnMetres, rows) {
     total.toFixed(2) + " m over " + rows + " rows.";
 }
 
-// Casting on and binding off are charged once per stitch cast on, so the whole
-// allowance lands in one lump rather than accumulating down the fabric.
-function updateSetupNote(setupMetres, stitches) {
-  const note = document.getElementById("setupNote");
+// What the cast-on is costing, and — the part worth spelling out — that it
+// moves the whole pattern. Several metres go on the needles before the first
+// stitch, so the fabric starts that far into the ball.
+function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
+  const note = document.getElementById("castOnNote");
+  const unit = castOnUnitInput.value;
 
-  if (!isAdvanced() || setupMetres <= 0) {
+  if (!(allowancePerStitch > 0) || !(stitches > 0)) {
     note.textContent = "";
     return;
   }
 
-  const unit = document.getElementById("typeUnit").value;
-  const each = fromMetres(setupMetres, unit);
-  const total = setupMetres * stitches;
+  const start = castOnPerStitch * stitches;
+  const total = allowancePerStitch * stitches;
 
-  // Said plainly because the fabric does not move when this is switched on,
-  // and a figure that changes the total without changing the picture looks
-  // like a bug otherwise. Where in the yarn you begin is your choice; the
-  // pattern is measured from the first stitch, not from the cast-on.
-  note.textContent =
-    "Adding " + each.toFixed(2) + " " + unit + " per stitch cast on, " +
-    total.toFixed(2) + " m over " + stitches + " stitches. This changes how " +
-    "much yarn you need, not where the colors fall — the pattern is measured " +
-    "from the first stitch.";
+  // Per stitch in the box's own unit, totals in metres — the same split the
+  // turning note uses, because a few centimetres per stitch and a few metres
+  // over a fabric are different sizes of thing.
+  let text = "Casting on " + stitches + " stitches takes " +
+    fromMetres(castOnPerStitch, unit).toFixed(2) + " " + unit + " each, " +
+    start.toFixed(2) + " m in all — so the fabric begins that far into the " +
+    "ball, and the colors shift with it.";
+
+  if (!isAdvanced()) {
+    text += " Binding off costs yarn as well; calibrate in advanced mode to " +
+      "count it.";
+    note.textContent = text;
+    return;
+  }
+
+  // The measured figure covers casting on and binding off together, which no
+  // swatch can separate. Whatever it has left over after the cast-on is the
+  // bind-off — unless the method claims more than the whole measurement, and
+  // then something is wrong and saying which is more use than a number.
+  const bindOff = total - start;
+  text += bindOff > 0
+    ? " Binding off accounts for the remaining " + bindOff.toFixed(2) +
+      " m of the measured setup figure."
+    : " The measured setup figure is smaller than this method is supposed to " +
+      "cost on its own, so all of it is being counted as cast-on. Either the " +
+      "method is wrong or the swatches were.";
+
+  note.textContent = text;
 }
 
 function templateActive() {
@@ -101,9 +124,28 @@ function turningActive() {
   return isAdvanced() && document.getElementById("useTurning").checked && !isCircular();
 }
 
-function setupActive() {
-  // Every fabric is cast on, flat or round alike.
-  return isAdvanced() && document.getElementById("useSetup").checked;
+// Yarn per stitch spent casting on, in metres.
+//
+// This is the figure that moves the pattern, so it has to be the cast-on
+// alone. Basic takes it from the chosen method. Advanced has a measured number
+// — but the solver's "setup" covers binding off as well, because no swatch can
+// tell the two apart, so it is a ceiling on the cast-on rather than the
+// cast-on itself. Whichever is smaller is the one that can be defended.
+function castOnMetres() {
+  const chosen = toMetres(num(castOnInput), castOnUnitInput.value);
+  if (!isAdvanced()) return chosen;
+  return Math.min(chosen, typeMetresByName()[SETUP_TYPE_NAME] || 0);
+}
+
+// Yarn per stitch spent at both ends together, for the total.
+//
+// Basic knows only what it was told about casting on. Advanced has the
+// measured figure, which covers binding off too — the one place the
+// inseparable pair is exactly what is wanted.
+function endAllowanceMetres() {
+  return isAdvanced()
+    ? typeMetresByName()[SETUP_TYPE_NAME] || 0
+    : toMetres(num(castOnInput), castOnUnitInput.value);
 }
 
 function inEffect() {
@@ -115,7 +157,8 @@ function inEffect() {
       : toMetres(num(perStitchInput), perStitchUnitInput.value),
     template: templateActive(),
     turnMetres: turningActive() ? typeMetresByName()[TURN_TYPE_NAME] || 0 : 0,
-    setupMetres: setupActive() ? typeMetresByName()[SETUP_TYPE_NAME] || 0 : 0,
+    castOnMetres: castOnMetres(),
+    endAllowanceMetres: endAllowanceMetres(),
   };
 }
 
@@ -319,9 +362,15 @@ function draw() {
     consumptionAt = uniformConsumption(effective.consumptionMetres);
   }
 
+  // Yarn gone before the first stitch, and yarn spent at both ends together.
+  // They are different numbers: the first moves the pattern, the second only
+  // adds to the bill.
+  const startMetres = effective.castOnMetres * stitches;
+  const allowance = effective.endAllowanceMetres * stitches;
+
   const sequence = readSequence();
   const grid = buildGrid(
-    sequence, stitches, rows, consumptionAt, circular, effective.turnMetres
+    sequence, stitches, rows, consumptionAt, circular, effective.turnMetres, startMetres
   );
 
   const join = reportedJoin(stitches, rows);
@@ -331,28 +380,25 @@ function draw() {
     grid, canvas.width / stitches, canvas.height / rows, seams, boundary
   );
 
-  // Spent before the first stitch and after the last, so it is added to the
-  // total rather than fed through layer 3 — it occupies no cell, and moving
-  // the whole pattern by it would assume a cast-on that eats working yarn.
-  // A long-tail cast-on takes its yarn from the other end and moves nothing.
-  const setupTotal = effective.setupMetres * stitches;
-
   showYarnNeeded(
     consumedThrough(stitches * rows - 1, stitches, consumptionAt, effective.turnMetres) +
-      setupTotal,
+      allowance,
     sequence
   );
+  // Where in the ball this point falls, which is what the next ball has to
+  // match — so the cast-on counts, having come off the ball before any of it.
   showJoinAdvice(
     sequence,
     join === null
       ? null
-      : consumedThrough(join, stitches, consumptionAt, effective.turnMetres)
+      : startMetres +
+        consumedThrough(join, stitches, consumptionAt, effective.turnMetres)
   );
 
   // Knitted in the round the fabric is a tube, so its width measurement is
   // the way round it, not the way across it.
   updateTurningNote(effective.turnMetres, rows);
-  updateSetupNote(effective.setupMetres, stitches);
+  updateCastOnNote(effective.castOnMetres, effective.endAllowanceMetres, stitches);
 
   const gauge = gaugeMm();
   const size = fabricSize(stitches, rows, gauge.stitchWidth, gauge.rowHeight);
@@ -657,7 +703,35 @@ for (const input of [joinRowInput, joinStitchInput, skeinLengthInput, tailInput]
 }
 
 document.getElementById("useTurning").addEventListener("change", draw);
-document.getElementById("useSetup").addEventListener("change", draw);
+
+// Picking a method fills in what it costs. The figures are rough, so the box
+// stays editable — and editing it moves the method to "measured myself", so a
+// typed number is never left sitting under a label that did not produce it.
+castOnMethodInput.addEventListener("change", function () {
+  const method = castOnMethod(castOnMethodInput.value);
+  if (method.perStitch !== null) {
+    castOnInput.value = Number(fromMetres(toMetres(method.perStitch, "cm"), castOnUnitInput.value).toFixed(3));
+  }
+  draw();
+});
+
+castOnInput.addEventListener("change", function () {
+  const method = castOnMethod(castOnMethodInput.value);
+  const typed = toMetres(num(castOnInput), castOnUnitInput.value);
+  if (method.perStitch !== null && Math.abs(typed - toMetres(method.perStitch, "cm")) > 1e-9) {
+    castOnMethodInput.value = "other";
+  }
+  draw();
+});
+
+let previousCastOnUnit = castOnUnitInput.value;
+
+castOnUnitInput.addEventListener("change", function () {
+  const unit = castOnUnitInput.value;
+  convertBoxes([castOnInput], previousCastOnUnit, unit);
+  previousCastOnUnit = unit;
+  draw();
+});
 document.getElementById("useTemplate").addEventListener("change", applyTemplate);
 document.getElementById("templateRows").addEventListener("change", applyTemplate);
 
@@ -1423,6 +1497,7 @@ function syncUnitBaselines() {
   previousSwatchUnit = swatchUnitInput.value;
   previousTypeUnit = typeUnitInput.value;
   previousCalUnit = calUnitInput.value;
+  previousCastOnUnit = castOnUnitInput.value;
 }
 
 applySettings(loadSettings());

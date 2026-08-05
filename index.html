@@ -157,11 +157,29 @@
       </label>
       <p class="hint advancedOnly" id="turningNote"></p>
 
-      <label class="choice advancedOnly">
-        <input type="checkbox" id="useSetup">
-        Count the yarn used casting on and binding off
-      </label>
-      <p class="hint advancedOnly" id="setupNote"></p>
+    </fieldset>
+
+    <fieldset id="castOn">
+      <legend>Cast on</legend>
+
+      <div class="fields">
+        <label for="castOnMethod">Method</label>
+        <select id="castOnMethod"></select>
+
+        <label for="castOnPerStitch" class="basicOnly">Yarn per stitch</label>
+        <span class="withUnit basicOnly">
+          <input type="number" id="castOnPerStitch" value="2.5" step="0.1" min="0">
+          <select id="castOnUnit" aria-label="Cast on yarn per stitch unit">
+            <option value="m">metres</option>
+            <option value="cm" selected>centimetres</option>
+            <option value="ft">feet</option>
+            <option value="yd">yards</option>
+            <option value="in">inches</option>
+          </select>
+        </span>
+      </div>
+
+      <p class="hint" id="castOnNote"></p>
     </fieldset>
 
     <fieldset>

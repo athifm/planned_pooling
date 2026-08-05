@@ -15,6 +15,29 @@ function uniformConsumption(metresPerStitch) {
   };
 }
 
+// Casting on costs yarn per stitch too, and how much depends entirely on the
+// method: a backward loop is a twist over the needle, a tubular cast-on works
+// two setup rows before the fabric starts.
+//
+// Centimetres, and rough — these are starting points for a worsted-weight yarn
+// at about 4.5mm, the same kind of placeholder the stitch types ship with. The
+// box they fill is editable, and the calibration solver measures the real
+// figure. Ordered as they appear in the dropdown, commonest first.
+const CAST_ON_METHODS = [
+  { id: "longTail", name: "Long-tail", perStitch: 2.5 },
+  { id: "cable", name: "Cable", perStitch: 3 },
+  { id: "knitted", name: "Knitted-on", perStitch: 3 },
+  { id: "backwardLoop", name: "Backward loop", perStitch: 1.2 },
+  { id: "tubular", name: "Tubular", perStitch: 4 },
+  // Picked automatically when the figure is edited by hand, so a typed number
+  // is never silently attributed to a method that does not produce it.
+  { id: "other", name: "Measured myself", perStitch: null },
+];
+
+function castOnMethod(id) {
+  return CAST_ON_METHODS.find(function (m) { return m.id === id; }) || CAST_ON_METHODS[0];
+}
+
 // One cell can carry more than one thing: a group can open before a stitch and
 // close after it, so "*3k" and "3p*23" are each a single cell. Splitting them
 // back into atoms means the parser below only ever deals with one idea at a

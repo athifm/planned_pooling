@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 14;
+const SETTINGS_VERSION = 15;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -70,7 +70,11 @@ const DEFAULT_SETTINGS = {
   typeUnit: "cm",
   activeType: "knit",
   useTurning: false,
-  useSetup: false,
+  // Casting on is not optional the way counting turns is — every fabric has
+  // one, so there is no switch, only how much it costs.
+  castOnMethod: "longTail",
+  castOnPerStitch: 2.5,
+  castOnUnit: "cm",
 
   // Which stitches to work out real figures for. "carried" means the stitch
   // cannot make a fabric on its own, so it has to share a swatch with one that
@@ -165,7 +169,9 @@ function readSettings() {
     typeUnit: fieldValue("typeUnit"),
     activeType: fieldValue("activeType"),
     useTurning: document.getElementById("useTurning").checked,
-    useSetup: document.getElementById("useSetup").checked,
+    castOnMethod: fieldValue("castOnMethod"),
+    castOnPerStitch: fieldNumber("castOnPerStitch"),
+    castOnUnit: fieldValue("castOnUnit"),
     calTypes: readCalTypes(),
     calConstruction: document.querySelector("input[name=calConstruction]:checked").value,
     calBudget: fieldNumber("calBudget"),
@@ -240,7 +246,9 @@ function applySettings(s) {
   restorePrescription(s.calSwatches, s.calUnknowns, s.calMeasured);
 
   document.getElementById("useTurning").checked = s.useTurning;
-  document.getElementById("useSetup").checked = s.useSetup;
+  document.getElementById("castOnMethod").value = s.castOnMethod;
+  document.getElementById("castOnPerStitch").value = s.castOnPerStitch;
+  document.getElementById("castOnUnit").value = s.castOnUnit;
   document.getElementById("useTemplate").checked = s.useTemplate;
   setTemplateRows(s.template);
 }
