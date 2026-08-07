@@ -157,6 +157,21 @@
         <input type="checkbox" id="useTurning">
         Count the yarn used turning at each row end
       </label>
+
+      <div class="fields advancedOnly">
+        <label for="turnPerRow">Yarn used per turn</label>
+        <span class="withUnit">
+          <input type="number" id="turnPerRow" value="1" step="0.1" min="0">
+          <select id="turnUnit" aria-label="Yarn per turn unit">
+            <option value="m">metres</option>
+            <option value="cm" selected>centimetres</option>
+            <option value="ft">feet</option>
+            <option value="yd">yards</option>
+            <option value="in">inches</option>
+          </select>
+        </span>
+      </div>
+
       <p class="hint advancedOnly" id="turningNote"></p>
 
     </fieldset>
@@ -168,8 +183,8 @@
         <label for="castOnMethod">Method</label>
         <select id="castOnMethod"></select>
 
-        <label for="castOnPerStitch" class="basicOnly">Yarn per stitch</label>
-        <span class="withUnit basicOnly">
+        <label for="castOnPerStitch">Yarn per stitch</label>
+        <span class="withUnit">
           <input type="number" id="castOnPerStitch" value="2.5" step="0.1" min="0">
           <select id="castOnUnit" aria-label="Cast on yarn per stitch unit">
             <option value="m">metres</option>
@@ -179,7 +194,20 @@
             <option value="in">inches</option>
           </select>
         </span>
+
+        <label for="setupPerStitch" class="advancedOnly">
+          Both ends together, measured
+        </label>
+        <input type="number" id="setupPerStitch" value="3" step="0.1" min="0"
+               class="advancedOnly">
       </div>
+
+      <p class="hint advancedOnly">
+        Casting on and binding off cannot be told apart by measuring, so the
+        calibration below finds them as one figure and writes it here. The
+        method above says how much of it is the cast-on, which is the half that
+        moves the pattern.
+      </p>
 
       <p class="hint" id="castOnNote"></p>
     </fieldset>

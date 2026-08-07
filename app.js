@@ -26,7 +26,24 @@ const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
 const castOnMethodInput = document.getElementById("castOnMethod");
 const castOnInput = document.getElementById("castOnPerStitch");
+const setupInput = document.getElementById("setupPerStitch");
 const castOnUnitInput = document.getElementById("castOnUnit");
+const turnInput = document.getElementById("turnPerRow");
+const turnUnitInput = document.getElementById("turnUnit");
+
+// The two figures the solver finds that are not stitches, named as
+// calibration.js names them. Each lives with the thing it is an allowance for,
+// so the app has to know where to put an answer.
+const TURN_FIGURE = "turn";
+const SETUP_FIGURE = "setup";
+
+function turnMetres() {
+  return toMetres(num(turnInput), turnUnitInput.value);
+}
+
+function setupMetres() {
+  return toMetres(num(setupInput), castOnUnitInput.value);
+}
 const stitchesLabel   = document.getElementById("stitchesLabel");
 
 function isCircular() {
@@ -68,9 +85,9 @@ function sectionOpen(name) {
 
 // Says what turning is actually costing, since one turn per row sounds small
 // and is not: it accumulates down the whole fabric.
-function updateTurningNote(turnMetres, rows) {
+function updateTurningNote(perTurn, rows) {
   const note = document.getElementById("turningNote");
-  document.body.classList.toggle("turning", turnMetres > 0);
+  document.body.classList.toggle("turning", perTurn > 0);
 
   if (!sectionOpen("turning")) { note.textContent = ""; return; }
 
@@ -78,16 +95,16 @@ function updateTurningNote(turnMetres, rows) {
     note.textContent = "Knitting in the round never turns, so nothing is added.";
     return;
   }
-  if (turnMetres <= 0) {
+  if (perTurn <= 0) {
     note.textContent = "";
     return;
   }
 
-  const unit = document.getElementById("typeUnit").value;
-  const each = fromMetres(turnMetres, unit);
-  const total = turnMetres * rows;
+  const unit = turnUnitInput.value;
+  const each = fromMetres(perTurn, unit);
+  const total = perTurn * rows;
   note.textContent =
-    "Adding " + each.toFixed(2) + " " + unit + " per row from the turn stitch type, " +
+    "Adding " + each.toFixed(2) + " " + unit + " per row, " +
     total.toFixed(2) + " m over " + rows + " rows.";
 }
 
@@ -158,7 +175,7 @@ function turningActive() {
 function castOnMetres() {
   const chosen = toMetres(num(castOnInput), castOnUnitInput.value);
   if (!sectionOpen("castOn")) return chosen;
-  return Math.min(chosen, typeMetresByName()[SETUP_TYPE_NAME] || 0);
+  return Math.min(chosen, setupMetres());
 }
 
 // Yarn per stitch spent at both ends together, for the total.
@@ -168,7 +185,7 @@ function castOnMetres() {
 // inseparable pair is exactly what is wanted.
 function endAllowanceMetres() {
   return sectionOpen("castOn")
-    ? typeMetresByName()[SETUP_TYPE_NAME] || 0
+    ? setupMetres()
     : toMetres(num(castOnInput), castOnUnitInput.value);
 }
 
@@ -185,7 +202,7 @@ function inEffect() {
       ? activeTypeMetres()
       : toMetres(num(perStitchInput), perStitchUnitInput.value),
     template: templateActive(),
-    turnMetres: turningActive() ? typeMetresByName()[TURN_TYPE_NAME] || 0 : 0,
+    turnMetres: turningActive() ? turnMetres() : 0,
     castOnMetres: castOnMetres(),
     endAllowanceMetres: endAllowanceMetres(),
   };
@@ -758,15 +775,10 @@ function problems() {
   }
 
   // A stitch that eats no yarn never advances along the ball, so every stitch
-  // after it would come out the same colour. Turn and setup may legitimately
-  // be zero — they are allowances, not stitches.
+  // after it would come out the same colour. The turning and cast-on
+  // allowances may legitimately be zero, which is why they are not here.
   if (sectionOpen("stitchTypes")) {
     for (const row of typeRows.querySelectorAll(".typeRow")) {
-      const type = {
-        name: row.querySelector(".typeName").value,
-        code: row.querySelector(".typeCode").value,
-      };
-      if (isNotAStitch(type)) continue;
       const box = row.querySelector(".typeAmount");
       if (!(Number(box.value) > 0)) bad(box, "A stitch has to use some yarn.");
     }
@@ -906,8 +918,16 @@ let previousCastOnUnit = castOnUnitInput.value;
 
 castOnUnitInput.addEventListener("change", function () {
   const unit = castOnUnitInput.value;
-  convertBoxes([castOnInput], previousCastOnUnit, unit);
+  convertBoxes([castOnInput, setupInput], previousCastOnUnit, unit);
   previousCastOnUnit = unit;
+});
+
+let previousTurnUnit = turnUnitInput.value;
+
+turnUnitInput.addEventListener("change", function () {
+  const unit = turnUnitInput.value;
+  convertBoxes([turnInput], previousTurnUnit, unit);
+  previousTurnUnit = unit;
 });
 
 // Gauge from a knitted sample. The millimetre boxes stay the source of truth;
@@ -980,8 +1000,10 @@ function calibrationRequest() {
     sigma: toMetres(num(calPrecisionInput), calUnitInput.value),
     // The targets are a percentage of what the app currently believes, so
     // calibration is always asked to improve on the figure it is replacing.
-    turnCurrent: current[TURN_TYPE_NAME],
-    setupCurrent: current[SETUP_TYPE_NAME],
+    // These two are not in the stitch table, so they are read from where they
+    // now live rather than from the map above.
+    turnCurrent: turnMetres(),
+    setupCurrent: setupMetres(),
   };
 }
 
@@ -1430,35 +1452,53 @@ function showSolution() {
   document.body.classList.add("solved");
 }
 
+// Where a solved figure gets written back to, and in what unit.
+//
+// Stitches go to their row in the table. The other two are not stitches and
+// are not in it — each lives with the thing it is an allowance for, so this is
+// the one place that has to know the difference.
+function destinationFor(name) {
+  if (name === TURN_FIGURE) {
+    return { input: turnInput, unit: turnUnitInput.value };
+  }
+  if (name === SETUP_FIGURE) {
+    return { input: setupInput, unit: castOnUnitInput.value };
+  }
+
+  const unit = document.getElementById("typeUnit").value;
+  for (const row of typeRows.querySelectorAll(".typeRow")) {
+    if (row.querySelector(".typeName").value === name) {
+      return { input: row.querySelector(".typeAmount"), unit: unit };
+    }
+  }
+  return null;
+}
+
 document.getElementById("applyCalibration").addEventListener("click", function () {
   if (!solution) return;
 
-  const unit = document.getElementById("typeUnit").value;
   const applied = [];
+  const spare = [];
 
-  // Matched by name against the stitch table, which is what makes turn work
-  // without a special case — it is a row like any other.
-  for (const row of typeRows.querySelectorAll(".typeRow")) {
-    const name = row.querySelector(".typeName").value;
-    const value = solution.values[name];
-    if (value === undefined) continue;
-    row.querySelector(".typeAmount").value = Number(fromMetres(value, unit).toFixed(3));
+  for (const name of frozen.unknowns) {
+    const target = destinationFor(name);
+    if (!target) {
+      spare.push(name);
+      continue;
+    }
+    target.input.value = Number(
+      fromMetres(solution.values[name], target.unit).toFixed(3)
+    );
     applied.push(name);
   }
 
-  const spare = frozen.unknowns.filter(function (name) {
-    return !applied.includes(name);
-  });
-
   let text = applied.length === 0
-    ? "None of these have a row in the stitch table to write to."
-    : "Written into the stitch table: " + applied.join(", ") + ".";
+    ? "None of these have anywhere to be written."
+    : "Written in: " + applied.join(", ") + ".";
   if (spare.length > 0) {
-    // Nothing in the app spends yarn on casting on yet, so there is nowhere
-    // for the figure to go. It is not lost — it is solved again from the same
-    // measurements whenever this panel is opened.
-    text += " " + spare.join(", ") + " is measured but not yet used anywhere, " +
-            "so it has been left out.";
+    text += " " + spare.join(", ") + " has no box to go in, so it has been " +
+            "left out — it is solved again from the same measurements whenever " +
+            "this panel is opened.";
   }
   applyResult.textContent = text;
 
@@ -1682,6 +1722,7 @@ function syncUnitBaselines() {
   previousTypeUnit = typeUnitInput.value;
   previousCalUnit = calUnitInput.value;
   previousCastOnUnit = castOnUnitInput.value;
+  previousTurnUnit = turnUnitInput.value;
 }
 
 applySettings(loadSettings());

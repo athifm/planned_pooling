@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 15;
+const SETTINGS_VERSION = 16;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -55,25 +55,28 @@ const DEFAULT_SETTINGS = {
 
   // Advanced. Rough placeholders — the calibration solver is what will
   // eventually produce trustworthy numbers from measured swatches.
+  // Stitches only. Turning and casting on are yarn the fabric really spends,
+  // but neither makes a stitch, so each one lives with the thing it is an
+  // allowance for rather than as a row here.
   types: [
     { name: "knit", code: "k", perStitch: 5 },
     { name: "purl", code: "p", perStitch: 5.5 },
     { name: "slipped", code: "s", perStitch: 2.5 },
-    // Not a stitch: yarn spent turning the work. Occupies no place in the
-    // fabric, so it is charged per row rather than per stitch.
-    { name: "turn", code: "t", perStitch: 1 },
-    // Also not a stitch: casting on and binding off, charged once per stitch
-    // cast on. One figure for both, because no swatch can tell them apart —
-    // every swatch contains S x castOn + S x bindOff, which is S x their sum.
-    { name: "setup", code: "", perStitch: 3 },
   ],
   typeUnit: "cm",
   activeType: "knit",
   useTurning: false,
+  // Charged per row, in the Construction panel with the choice it belongs to.
+  turnPerRow: 1,
+  turnUnit: "cm",
   // Casting on is not optional the way counting turns is — every fabric has
   // one, so there is no switch, only how much it costs.
   castOnMethod: "longTail",
   castOnPerStitch: 2.5,
+  // Casting on and binding off as one figure, because no swatch can tell them
+  // apart. Shares the cast-on unit, being the same kind of measurement in the
+  // same panel.
+  setupPerStitch: 3,
   castOnUnit: "cm",
 
   // Which stitches to work out real figures for. "carried" means the stitch
@@ -169,8 +172,11 @@ function readSettings() {
     typeUnit: fieldValue("typeUnit"),
     activeType: fieldValue("activeType"),
     useTurning: document.getElementById("useTurning").checked,
+    turnPerRow: fieldNumber("turnPerRow"),
+    turnUnit: fieldValue("turnUnit"),
     castOnMethod: fieldValue("castOnMethod"),
     castOnPerStitch: fieldNumber("castOnPerStitch"),
+    setupPerStitch: fieldNumber("setupPerStitch"),
     castOnUnit: fieldValue("castOnUnit"),
     calTypes: readCalTypes(),
     calConstruction: document.querySelector("input[name=calConstruction]:checked").value,
@@ -246,8 +252,11 @@ function applySettings(s) {
   restorePrescription(s.calSwatches, s.calUnknowns, s.calMeasured);
 
   document.getElementById("useTurning").checked = s.useTurning;
+  document.getElementById("turnPerRow").value = s.turnPerRow;
+  document.getElementById("turnUnit").value = s.turnUnit;
   document.getElementById("castOnMethod").value = s.castOnMethod;
   document.getElementById("castOnPerStitch").value = s.castOnPerStitch;
+  document.getElementById("setupPerStitch").value = s.setupPerStitch;
   document.getElementById("castOnUnit").value = s.castOnUnit;
   document.getElementById("useTemplate").checked = s.useTemplate;
   setTemplateRows(s.template);

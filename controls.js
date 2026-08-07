@@ -349,42 +349,16 @@ function readTypes() {
   });
 }
 
-// Two rows in the stitch table are not stitches. Both are yarn a fabric really
-// spends, so they belong in the table where they can be measured and edited —
-// but neither one occupies a place in the knitting, and everything that walks
-// the fabric has to skip them.
-//
-// Matched by name, so it is the row in the table that decides.
-const TURN_TYPE_NAME = "turn";
-const SETUP_TYPE_NAME = "setup";
-
-function typeNameOf(type) {
-  return type.name.trim().toLowerCase();
-}
-
-function isTurnType(type) {
-  return typeNameOf(type) === TURN_TYPE_NAME;
-}
-
-function isSetupType(type) {
-  return typeNameOf(type) === SETUP_TYPE_NAME;
-}
-
-// Charged per row and per cast-on stitch respectively, rather than per stitch
-// worked. A fabric cannot be made of either.
-function isNotAStitch(type) {
-  return isTurnType(type) || isSetupType(type);
-}
-
 // { k: "knit", p: "purl", ... } for the template parser.
 //
-// Turn and setup are left out on purpose. Neither produces a stitch, so either
-// one in a row template would add a phantom column to the fabric and charge
-// twice — once as a stitch, once as the allowance it already is.
+// Every row in the table is a stitch now. Turning and casting on are yarn the
+// fabric really spends, but neither makes a stitch, so they live with the
+// thing they are an allowance for — turning in Construction, casting on in
+// Cast on — rather than as rows here that everything had to remember to skip.
 function typeNamesByCode() {
   const map = {};
   for (const t of readTypes()) {
-    if (t.code && !isNotAStitch(t)) map[t.code] = t.name;
+    if (t.code) map[t.code] = t.name;
   }
   return map;
 }
@@ -399,8 +373,6 @@ function refreshTypeChoices() {
 
   select.textContent = "";
   for (const t of types) {
-    // A fabric cannot be made entirely of turning the work, or of casting on.
-    if (isNotAStitch(t)) continue;
     const option = document.createElement("option");
     option.value = t.name;
     option.textContent = t.name;
@@ -515,10 +487,10 @@ function refreshCalTypes(saved) {
 
   calTypeList.textContent = "";
   for (const t of readTypes()) {
-    // Neither is a stitch you can choose to calibrate. Turn is solved for
-    // whenever a flat swatch is allowed and setup always, because every swatch
-    // contains a cast-on whether anyone asked for one or not.
-    if (isNotAStitch(t)) continue;
+    // Turning and casting on are not offered here. Neither is something you
+    // choose to calibrate: turn is solved for whenever a flat swatch is
+    // allowed, and setup always, because every swatch has a cast-on whether
+    // anyone asked for one or not.
     const was = previous.get(t.name);
     addCalTypeRow(t.name, was ? was.use : true, was ? !!was.carried : false);
   }
