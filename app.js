@@ -37,22 +37,42 @@ function isAdvanced() {
   return document.querySelector("input[name=mode]:checked").value === "advanced";
 }
 
-// The settings actually in force, as opposed to the ones sitting in the form.
+// --- Which sections have their extra depth in force -------------------------
 //
-// Basic mode forces the simple values. Advanced controls keep their values —
-// they are only hidden, so switching back restores them — but while basic is
-// selected those values are NOT applied. The rule is that what you can see is
-// what is in effect; a hidden control quietly changing the result is the bug
-// this exists to prevent.
+// Every question that used to be "is the mode advanced" is really a question
+// about one section: is the stitch type table in force, is the template, is
+// the turning allowance. They only ever agreed because one radio answered for
+// all of them.
 //
-// Steps 3 to 5 add their entries here.
+// Asking per section is what lets them come apart — each opening on its own,
+// under the same rule as today. For now the mode radio still answers for
+// every one, so nothing about the app changes; the names are the whole point,
+// and splitting them later only has to change this function.
+const SECTIONS = [
+  "display",      // zoom
+  "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
+  "template",     // rows built from a template
+  "turning",      // yarn spent turning at each row end
+  "castOn",       // the measured setup figure, in place of the method's
+  "calibration",  // measuring your own figures from swatches
+];
+
+function sectionOpen(name) {
+  if (!SECTIONS.includes(name)) {
+    // A typo would otherwise read as "that section is closed" and quietly
+    // change what is in force, which is the hardest kind of bug to see.
+    console.warn("sectionOpen: no section called " + name);
+  }
+  return isAdvanced();
+}
+
 // Says what turning is actually costing, since one turn per row sounds small
 // and is not: it accumulates down the whole fabric.
 function updateTurningNote(turnMetres, rows) {
   const note = document.getElementById("turningNote");
   document.body.classList.toggle("turning", turnMetres > 0);
 
-  if (!isAdvanced()) { note.textContent = ""; return; }
+  if (!sectionOpen("turning")) { note.textContent = ""; return; }
 
   if (isCircular()) {
     note.textContent = "Knitting in the round never turns, so nothing is added.";
@@ -94,7 +114,7 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
     start.toFixed(2) + " m in all — so the fabric begins that far into the " +
     "ball, and the colors shift with it.";
 
-  if (!isAdvanced()) {
+  if (!sectionOpen("castOn")) {
     text += " Binding off costs yarn as well; calibrate in advanced mode to " +
       "count it.";
     note.textContent = text;
@@ -117,43 +137,51 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
 }
 
 function templateActive() {
-  return isAdvanced() && document.getElementById("useTemplate").checked;
+  return sectionOpen("template") && document.getElementById("useTemplate").checked;
 }
 
 function turningActive() {
   // Knitting in the round never turns the work, so there is nothing to charge.
-  return isAdvanced() && document.getElementById("useTurning").checked && !isCircular();
+  return sectionOpen("turning") &&
+    document.getElementById("useTurning").checked &&
+    !isCircular();
 }
 
 // Yarn per stitch spent casting on, in metres.
 //
 // This is the figure that moves the pattern, so it has to be the cast-on
-// alone. Basic takes it from the chosen method. Advanced has a measured number
-// — but the solver's "setup" covers binding off as well, because no swatch can
-// tell the two apart, so it is a ceiling on the cast-on rather than the
-// cast-on itself. Whichever is smaller is the one that can be defended.
+// alone. Closed, it is whatever the chosen method costs. Open, there is a
+// measured number — but the solver's "setup" covers binding off as well,
+// because no swatch can tell the two apart, so it is a ceiling on the cast-on
+// rather than the cast-on itself. Whichever is smaller is the one that can be
+// defended.
 function castOnMetres() {
   const chosen = toMetres(num(castOnInput), castOnUnitInput.value);
-  if (!isAdvanced()) return chosen;
+  if (!sectionOpen("castOn")) return chosen;
   return Math.min(chosen, typeMetresByName()[SETUP_TYPE_NAME] || 0);
 }
 
 // Yarn per stitch spent at both ends together, for the total.
 //
-// Basic knows only what it was told about casting on. Advanced has the
-// measured figure, which covers binding off too — the one place the
+// Closed, this knows only what it was told about casting on. Open, there is
+// the measured figure, which covers binding off too — the one place the
 // inseparable pair is exactly what is wanted.
 function endAllowanceMetres() {
-  return isAdvanced()
+  return sectionOpen("castOn")
     ? typeMetresByName()[SETUP_TYPE_NAME] || 0
     : toMetres(num(castOnInput), castOnUnitInput.value);
 }
 
+// The settings actually in force, as opposed to the ones sitting in the form.
+//
+// A closed section keeps its values — they are only hidden, so opening it
+// again restores them — but while it is closed those values are NOT applied.
+// The rule is that what you can see is what is in effect; a hidden control
+// quietly changing the result is the bug this exists to prevent.
 function inEffect() {
-  const advanced = isAdvanced();
   return {
-    zoom: advanced ? num(zoomInput) : DEFAULT_SETTINGS.zoom,
-    consumptionMetres: advanced
+    zoom: sectionOpen("display") ? num(zoomInput) : DEFAULT_SETTINGS.zoom,
+    consumptionMetres: sectionOpen("stitchTypes")
       ? activeTypeMetres()
       : toMetres(num(perStitchInput), perStitchUnitInput.value),
     template: templateActive(),
@@ -719,7 +747,7 @@ function problems() {
     bad(rowHeightInput, "A row has to have a height.");
   }
 
-  if (isAdvanced() && !(num(zoomInput) > 0)) {
+  if (sectionOpen("display") && !(num(zoomInput) > 0)) {
     bad(zoomInput, "Needs to be more than zero.");
   }
 
@@ -732,7 +760,7 @@ function problems() {
   // A stitch that eats no yarn never advances along the ball, so every stitch
   // after it would come out the same colour. Turn and setup may legitimately
   // be zero — they are allowances, not stitches.
-  if (isAdvanced()) {
+  if (sectionOpen("stitchTypes")) {
     for (const row of typeRows.querySelectorAll(".typeRow")) {
       const type = {
         name: row.querySelector(".typeName").value,
