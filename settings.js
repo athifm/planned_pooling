@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 16;
+const SETTINGS_VERSION = 17;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -65,7 +65,10 @@ const DEFAULT_SETTINGS = {
   ],
   typeUnit: "cm",
   activeType: "knit",
-  useTurning: false,
+  // Which sections have been opened. A closed section keeps its values but
+  // does not apply them, so this is part of what is in force rather than a
+  // note about the furniture.
+  openSections: [],
   // Charged per row, in the Construction panel with the choice it belongs to.
   turnPerRow: 1,
   turnUnit: "cm",
@@ -171,7 +174,9 @@ function readSettings() {
     types: readTypes(),
     typeUnit: fieldValue("typeUnit"),
     activeType: fieldValue("activeType"),
-    useTurning: document.getElementById("useTurning").checked,
+    openSections: [...document.querySelectorAll("[data-section]")]
+      .filter(function (box) { return box.open; })
+      .map(function (box) { return box.dataset.section; }),
     turnPerRow: fieldNumber("turnPerRow"),
     turnUnit: fieldValue("turnUnit"),
     castOnMethod: fieldValue("castOnMethod"),
@@ -251,7 +256,11 @@ function applySettings(s) {
   document.getElementById("calTailEnd").value = s.calTailEnd;
   restorePrescription(s.calSwatches, s.calUnknowns, s.calMeasured);
 
-  document.getElementById("useTurning").checked = s.useTurning;
+  const open = s.openSections || [];
+  for (const box of document.querySelectorAll("[data-section]")) {
+    box.open = open.includes(box.dataset.section);
+  }
+
   document.getElementById("turnPerRow").value = s.turnPerRow;
   document.getElementById("turnUnit").value = s.turnUnit;
   document.getElementById("castOnMethod").value = s.castOnMethod;

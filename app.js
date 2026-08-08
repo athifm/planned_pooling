@@ -80,7 +80,11 @@ function sectionOpen(name) {
     // change what is in force, which is the hardest kind of bug to see.
     console.warn("sectionOpen: no section called " + name);
   }
-  return isAdvanced();
+
+  const box = document.querySelector('[data-section="' + name + '"]');
+  // Sections not yet converted still take their answer from the mode radio,
+  // so the two can coexist while they are converted one at a time.
+  return box ? box.open : isAdvanced();
 }
 
 // Says what turning is actually costing, since one turn per row sounds small
@@ -158,10 +162,12 @@ function templateActive() {
 }
 
 function turningActive() {
+  // Opening the section is what switches this on — there is no separate tick,
+  // because a checkbox inside a disclosure would be two ways to say the same
+  // thing and could disagree.
+  //
   // Knitting in the round never turns the work, so there is nothing to charge.
-  return sectionOpen("turning") &&
-    document.getElementById("useTurning").checked &&
-    !isCircular();
+  return sectionOpen("turning") && !isCircular();
 }
 
 // Yarn per stitch spent casting on, in metres.
@@ -1708,6 +1714,14 @@ pageBox.addEventListener("input", function (e) {
   regenerate();
   saveSoon();
 });
+
+// Opening a section puts its contents in force, so it is a change like any
+// other. Captured rather than bubbled: a details element's toggle event does
+// not bubble, and capture is what reaches it without a listener per section.
+pageBox.addEventListener("toggle", function () {
+  regenerate();
+  saveSoon();
+}, true);
 
 // Each unit dropdown remembers what it was showing, so it can convert from the
 // old unit to the new one. Restoring saved settings changes those dropdowns

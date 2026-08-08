@@ -282,8 +282,54 @@ fieldset {
   min-width: 0;
 }
 
-.panel fieldset > * {
+.panel fieldset > *,
+.panel .panelSection > * {
   max-width: 100%;
+}
+
+/* --- Sections that open ------------------------------------------------------
+   A closed section keeps its values but does not apply them, so opening one is
+   how you say "this part of the fabric is worth my attention". A top-level
+   section is dressed as a fieldset so a panel converted a piece at a time does
+   not look half broken; a sub-section sits inside one. */
+
+.panelSection {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.9rem 1rem 1rem;
+  min-inline-size: 0;
+  min-width: 0;
+}
+
+.panelSection > summary,
+.subSection > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #345;
+}
+
+.panelSection > summary {
+  /* Reads as the legend it replaces. */
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.panelSection[open] > summary,
+.subSection[open] > summary {
+  margin-bottom: 0.7rem;
+}
+
+.subSection {
+  margin-top: 0.7rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.6rem;
+}
+
+/* An open section is doing something to the fabric, and that is worth seeing
+   at a glance when several are open at once. */
+.subSection[open] > summary,
+.panelSection[open] > summary {
+  font-weight: 600;
 }
 
 /* Grid and flex children refuse to shrink below their content unless told
