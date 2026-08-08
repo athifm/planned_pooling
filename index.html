@@ -44,19 +44,7 @@
   </div>
 
   <div class="panel">
-    <fieldset id="mode">
-      <legend>Mode</legend>
-      <label class="choice">
-        <input type="radio" name="mode" value="basic" checked>
-        Basic
-      </label>
-      <label class="choice">
-        <input type="radio" name="mode" value="advanced">
-        Advanced — extra controls for a more accurate prediction
-      </label>
-    </fieldset>
-
-    <details class="panelSection" data-section="display">
+<details class="panelSection" data-section="display">
       <summary>Display</summary>
       <div class="fields">
         <label for="zoom">Zoom (pixels per mm)</label>
@@ -259,42 +247,94 @@
       </details>
     </fieldset>
 
-    <fieldset class="advancedOnly">
-      <legend>Stitch types</legend>
-      <p class="hint">
-        Different stitches eat different amounts of yarn. These figures are
-        rough starting points — measure your own to get real predictions.
-      </p>
+    <fieldset id="stitches">
+      <legend>Stitches</legend>
 
-      <div class="fields">
-        <label for="typeUnit">Yarn per stitch in</label>
-        <select id="typeUnit">
-          <option value="m">metres</option>
-          <option value="cm" selected>centimetres</option>
-          <option value="ft">feet</option>
-          <option value="yd">yards</option>
-          <option value="in">inches</option>
-        </select>
+      <!-- The whole fabric in one figure. Replaced, not merely supplemented,
+           once the table below is opened. -->
+      <div class="fields oneStitchOnly">
+        <label for="perStitch">Yarn per stitch</label>
+        <span class="withUnit">
+          <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
+          <select id="perStitchUnit" aria-label="Yarn per stitch unit">
+            <option value="m">metres</option>
+            <option value="cm" selected>centimetres</option>
+            <option value="ft">feet</option>
+            <option value="yd">yards</option>
+            <option value="in">inches</option>
+          </select>
+        </span>
       </div>
 
-      <div class="typeHeader">
-        <span>Name</span>
-        <span>Code</span>
-        <span>Yarn per stitch</span>
-        <span></span>
-      </div>
-      <div id="typeRows"></div>
-      <button type="button" id="addType">+ Add stitch type</button>
+      <details class="subSection" data-section="stitchTypes">
+        <summary>More than one kind of stitch</summary>
 
-      <div class="fields typeChoice">
-        <label for="activeType">Stitch used</label>
-        <select id="activeType"></select>
-      </div>
-      <p class="hint">Used when the row template below is switched off.</p>
+        <p class="hint">
+          Different stitches eat different amounts of yarn. These figures are
+          rough starting points — measure your own to get real predictions.
+        </p>
+
+        <div class="fields">
+          <label for="typeUnit">Yarn per stitch in</label>
+          <select id="typeUnit">
+            <option value="m">metres</option>
+            <option value="cm" selected>centimetres</option>
+            <option value="ft">feet</option>
+            <option value="yd">yards</option>
+            <option value="in">inches</option>
+          </select>
+        </div>
+
+        <div class="typeHeader">
+          <span>Name</span>
+          <span>Code</span>
+          <span>Yarn per stitch</span>
+          <span></span>
+        </div>
+        <div id="typeRows"></div>
+        <button type="button" id="addType">+ Add stitch type</button>
+
+        <div class="fields typeChoice">
+          <label for="activeType">Stitch used</label>
+          <select id="activeType"></select>
+        </div>
+        <p class="hint">Used unless the template below says otherwise.</p>
+
+        <!-- Nested on purpose: a template is written in stitch codes, so it
+             cannot mean anything with the table put away. Closing the parent
+             closes this too, which is a rule the shape enforces rather than
+             one the code has to remember. -->
+        <details class="subSection" data-section="template">
+          <summary>Build rows from a template</summary>
+
+          <p class="hint">
+            One entry per box. <code>3k</code> means three knits.
+            A <code>*</code> before a stitch opens a group and one after it
+            closes the group, followed by how many times — so
+            <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is
+            a 140&nbsp;stitch row with slipped edges.
+            Enter, space or Tab moves to the next box.
+            The strip above counts stitches as you go; while a group is open it
+            counts the group instead, and clears once you close it.
+          </p>
+
+          <div id="templateRows"></div>
+          <button type="button" id="addTemplateRow">+ Add row</button>
+
+          <p class="hint">
+            Rows are worked once unless you mark a repeat. Tick <b>start</b> on
+            the first row of a block and <b>end</b> on the last, then say how
+            many times — tick both on one row to repeat just that row. The
+            template then states the whole fabric, so the stitch and row counts
+            follow from it. Every row has to come out the same width.
+          </p>
+          <p class="hint" id="templateResult"></p>
+        </details>
+      </details>
     </fieldset>
 
-    <fieldset class="advancedOnly" id="calibration">
-      <legend>Calibration</legend>
+    <details class="panelSection" id="calibration" data-section="calibration">
+      <summary>Calibration</summary>
       <p class="hint">
         The figures above are guesses. Knit a few small swatches, measure the
         yarn each one ate, and they become measurements instead. Say which
@@ -348,7 +388,7 @@
 
       <button type="button" id="prescribe">Suggest swatches</button>
       <div id="prescription"></div>
-    </fieldset>
+    </details>
 
     <fieldset class="measurePanel" id="measurement">
       <legend>Measurements</legend>
@@ -403,54 +443,6 @@
       <p class="hint" id="applyResult"></p>
     </fieldset>
 
-    <fieldset class="advancedOnly">
-      <legend>Row template</legend>
-
-      <label class="choice">
-        <input type="checkbox" id="useTemplate">
-        Build rows from a template
-      </label>
-
-      <p class="hint">
-        One entry per box. <code>3k</code> means three knits.
-        A <code>*</code> before a stitch opens a group and one after it closes
-        the group, followed by how many times — so
-        <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is a
-        140&nbsp;stitch row with slipped edges.
-        Enter, space or Tab moves to the next box.
-        The strip above counts stitches as you go; while a group is open it
-        counts the group instead, and clears once you close it.
-      </p>
-
-      <div id="templateRows"></div>
-      <button type="button" id="addTemplateRow">+ Add row</button>
-
-      <p class="hint">
-        Rows are worked once unless you mark a repeat. Tick <b>start</b> on the
-        first row of a block and <b>end</b> on the last, then say how many
-        times — tick both on one row to repeat just that row. The template then
-        states the whole fabric, so the stitch and row counts follow from it.
-        Every row has to come out the same width.
-      </p>
-      <p class="hint" id="templateResult"></p>
-    </fieldset>
-
-    <fieldset class="basicOnly">
-      <legend>Yarn</legend>
-      <div class="fields">
-        <label for="perStitch">Yarn per stitch</label>
-        <span class="withUnit">
-          <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
-          <select id="perStitchUnit" aria-label="Yarn per stitch unit">
-            <option value="m">metres</option>
-            <option value="cm" selected>centimetres</option>
-            <option value="ft">feet</option>
-            <option value="yd">yards</option>
-            <option value="in">inches</option>
-          </select>
-        </span>
-      </div>
-    </fieldset>
   </div>
 
   <div id="splitter" class="splitter" title="Drag to widen the controls or the fabric"></div>

@@ -10,14 +10,13 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 17;
+const SETTINGS_VERSION = 18;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
 // than 2 becoming 1.9999999 after a round trip through a conversion.
 const DEFAULT_SETTINGS = {
   version: SETTINGS_VERSION,
-  mode: "basic",
   // Width of the controls column in pixels. 28rem at the default font size.
   controlsWidth: 448,
   // Also the value basic mode forces zoom back to.
@@ -108,7 +107,6 @@ const DEFAULT_SETTINGS = {
   calTailStart: 15,
   calTailEnd: 15,
 
-  useTemplate: false,
   // 1 + 23 x 6 + 1 = 140 stitches, matching the default count. Two rows so the
   // block behaviour is visible straight away.
   // Two rows marked as a repeat, run 25 times: 140 stitches by 50 rows,
@@ -141,7 +139,6 @@ function fieldNumber(id) {
 function readSettings() {
   return {
     version: SETTINGS_VERSION,
-    mode: document.querySelector("input[name=mode]:checked").value,
     controlsWidth: currentControlsWidth(),
     zoom: fieldNumber("zoom"),
     sequence: [...document.querySelectorAll(".colorRow")].map(function (row) {
@@ -195,7 +192,6 @@ function readSettings() {
     calWeights: readWeightPairs(),
     calTailStart: fieldNumber("calTailStart"),
     calTailEnd: fieldNumber("calTailEnd"),
-    useTemplate: document.getElementById("useTemplate").checked,
     template: readTemplateRows(),
   };
 }
@@ -204,7 +200,6 @@ function readSettings() {
 function applySettings(s) {
   setColorRows(s.sequence);
 
-  document.querySelector("input[name=mode][value=" + s.mode + "]").checked = true;
   setControlsWidth(s.controlsWidth);
   document.getElementById("zoom").value = s.zoom;
   document.getElementById("useFades").checked = s.useFades;
@@ -267,7 +262,6 @@ function applySettings(s) {
   document.getElementById("castOnPerStitch").value = s.castOnPerStitch;
   document.getElementById("setupPerStitch").value = s.setupPerStitch;
   document.getElementById("castOnUnit").value = s.castOnUnit;
-  document.getElementById("useTemplate").checked = s.useTemplate;
   setTemplateRows(s.template);
 }
 

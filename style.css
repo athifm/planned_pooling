@@ -402,21 +402,10 @@ input[type="color"] {
   margin: 0.35rem 0;
 }
 
-/* Advanced-only controls are hidden until the mode says otherwise. They stay
-   in the page rather than being removed, so their values survive a switch to
-   basic and back — but see inEffect() in app.js: while basic is selected those
-   values are not applied. Hidden and inactive have to travel together. */
-.advancedOnly {
-  display: none;
-}
-
-body.advanced .advancedOnly {
-  display: block;
-}
-
-/* The mirror image: controls that advanced mode replaces with something
-   better. Yarn-per-stitch becomes the stitch type table. */
-body.advanced .basicOnly {
+/* One figure for the whole fabric, replaced by the table when that is opened.
+   Not merely supplemented: two controls claiming the same job, with only one
+   of them listened to, is the thing inEffect() exists to prevent. */
+body.open-stitchTypes .oneStitchOnly {
   display: none;
 }
 
@@ -725,7 +714,7 @@ body.invalid #yarnReadout {
   display: none;
 }
 
-body.advanced.prescribed .measurePanel {
+body.prescribed .measurePanel {
   display: block;
 }
 

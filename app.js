@@ -3,7 +3,6 @@
 // The layers below know nothing about the page; this file is the only
 // place that touches both.
 
-const modeSet         = document.getElementById("mode");
 const zoomInput       = document.getElementById("zoom");
 const stitchesInput   = document.getElementById("stitches");
 const rowsInput       = document.getElementById("rows");
@@ -50,21 +49,16 @@ function isCircular() {
   return document.querySelector("input[name=construction]:checked").value === "circular";
 }
 
-function isAdvanced() {
-  return document.querySelector("input[name=mode]:checked").value === "advanced";
-}
-
 // --- Which sections have their extra depth in force -------------------------
 //
-// Every question that used to be "is the mode advanced" is really a question
-// about one section: is the stitch type table in force, is the template, is
-// the turning allowance. They only ever agreed because one radio answered for
-// all of them.
+// There is no mode any more. Every question that used to be "is the mode
+// advanced" was really a question about one section — is the stitch table in
+// force, is the template, is the turning allowance — and they only ever agreed
+// because one radio answered for all of them.
 //
-// Asking per section is what lets them come apart — each opening on its own,
-// under the same rule as today. For now the mode radio still answers for
-// every one, so nothing about the app changes; the names are the whole point,
-// and splitting them later only has to change this function.
+// Each section is a details element now, and opening it is what puts its
+// contents in force. The rule is unchanged and only narrower: what you can see
+// is what is in effect.
 const SECTIONS = [
   "display",      // zoom
   "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
@@ -81,10 +75,30 @@ function sectionOpen(name) {
     console.warn("sectionOpen: no section called " + name);
   }
 
-  const box = document.querySelector('[data-section="' + name + '"]');
-  // Sections not yet converted still take their answer from the mode radio,
-  // so the two can coexist while they are converted one at a time.
-  return box ? box.open : isAdvanced();
+  let box = document.querySelector('[data-section="' + name + '"]');
+  if (!box) return false;
+
+  // A section inside a closed one is not in force whatever its own state.
+  // This is what makes nesting do the work that dependency rules would
+  // otherwise have to: a row template is written in stitch codes, so putting
+  // the stitch table away has to take the template with it, and the shape
+  // says so rather than the code remembering to.
+  while (box) {
+    if (!box.open) return false;
+    box = box.parentElement && box.parentElement.closest("details");
+  }
+  return true;
+}
+
+// Mirror the section states onto the body so styling can follow them. The one
+// yarn-per-stitch figure has to disappear when the table that replaces it is
+// opened, or two controls would be claiming the same job and only one of them
+// would be listened to.
+function reflectSections() {
+  for (const box of document.querySelectorAll("[data-section]")) {
+    const name = box.dataset.section;
+    document.body.classList.toggle("open-" + name, sectionOpen(name));
+  }
 }
 
 // Says what turning is actually costing, since one turn per row sounds small
@@ -158,7 +172,7 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
 }
 
 function templateActive() {
-  return sectionOpen("template") && document.getElementById("useTemplate").checked;
+  return sectionOpen("template");
 }
 
 function turningActive() {
@@ -675,13 +689,6 @@ new ResizeObserver(function () {
   }
 }).observe(canvasWrap);
 
-// Switching mode changes which controls are visible AND which are in force,
-// so both have to happen together — see inEffect(). Only the visibility part
-// lives here; the change event bubbles on to the panel listener, which does
-// the regenerating for every control alike.
-function applyMode() {
-  document.body.classList.toggle("advanced", isAdvanced());
-}
 
 // The size the user had before a template took the boxes over, so turning the
 // template off gives them their fabric back rather than leaving them on
@@ -795,7 +802,10 @@ function problems() {
   // The template states the whole fabric, so if it cannot be read there is no
   // fabric. Its own message box already says what is wrong with it in detail.
   if (templateActive() && currentTemplate().error) {
-    bad(document.getElementById("useTemplate"), "The template below cannot be read.");
+    bad(
+      document.querySelector('[data-section="template"] > summary'),
+      "The template below cannot be read."
+    );
   }
 
   return found;
@@ -854,7 +864,9 @@ function showProblems(found) {
 function regenerate(options) {
   const sizeFrom = (options && options.sizeFrom) || "counts";
 
-  // First, because it decides what the counts are.
+  // First, because everything after it depends on which sections are in force.
+  reflectSections();
+  // Then this, because it decides what the counts are.
   syncTemplateState();
 
   const found = problems();
@@ -873,7 +885,6 @@ function regenerate(options) {
   draw();
 }
 
-modeSet.addEventListener("change", applyMode);
 // Reporting a join. Clicking is the quick way in; the boxes make it exact and
 // let you say "row 20, stitch 87" without hunting for a 5px cell.
 canvas.addEventListener("click", function (e) {
@@ -1741,9 +1752,8 @@ function syncUnitBaselines() {
 
 applySettings(loadSettings());
 syncUnitBaselines();
-// Restoring the radio does not fire a change event, so the body class has to
-// be set explicitly — the same hazard as the unit baselines above.
-document.body.classList.toggle("advanced", isAdvanced());
+// Restoring a checkbox does not fire a change event, so the body classes have
+// to be set explicitly — the same hazard as the unit baselines above.
 document.body.classList.toggle("fades", useFadesInput.checked);
 document.body.classList.toggle("weighing", byWeight());
 updateCalUnitTags();
