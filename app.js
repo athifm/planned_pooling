@@ -59,6 +59,18 @@ function isCircular() {
 // Each section is a details element now, and opening it is what puts its
 // contents in force. The rule is unchanged and only narrower: what you can see
 // is what is in effect.
+// Short names for talking about a section in a sentence. The summaries read
+// as invitations ("More than one kind of stitch"), which is right on the
+// control and wrong in prose.
+const SECTION_NAMES = {
+  display: "Display",
+  stitchTypes: "Stitches",
+  template: "Row template",
+  turning: "Turning",
+  castOn: "Cast on",
+  calibration: "Calibration",
+};
+
 const SECTIONS = [
   "display",      // zoom
   "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
@@ -94,6 +106,23 @@ function sectionOpen(name) {
 // yarn-per-stitch figure has to disappear when the table that replaces it is
 // opened, or two controls would be claiming the same job and only one of them
 // would be listened to.
+// Open whatever a control sits inside, ancestors and all, and say which
+// sections that was. A nested section needs its parents open to be in force,
+// so opening one on its own would be no use.
+function openSectionsAround(element) {
+  const opened = [];
+  let box = element.closest("details");
+
+  while (box) {
+    if (!box.open) {
+      box.open = true;
+      if (box.dataset.section) opened.push(SECTION_NAMES[box.dataset.section]);
+    }
+    box = box.parentElement && box.parentElement.closest("details");
+  }
+  return opened;
+}
+
 function reflectSections() {
   for (const box of document.querySelectorAll("[data-section]")) {
     const name = box.dataset.section;
@@ -1425,19 +1454,44 @@ function showSolution() {
   // the precision claimed earlier — and the only independent check there is.
   if (result.measuredNoise) {
     const said = assumedSigma();
-    let text = "Your swatches disagree by about " +
-      calAmount(result.scatter, calUnitInput.value) + ", against the " +
-      calAmount(said, calUnitInput.value) + " you said you could measure to.";
-    if (said > 0 && result.scatter > said * 2) {
-      text += " Worse than expected — either something was mismeasured, or the " +
-              "tension varied between swatches.";
-    } else if (result.scatter < said) {
-      // The error bars above were worked out from the claimed precision, not
-      // from this — worth saying, because otherwise they look pessimistic.
-      text += " Closer than that is not something a handful of swatches can " +
-              "prove, so the figures above still allow for the tape.";
+    const unit = calUnitInput.value;
+    // Zero disagreement is a real answer, not a broken one — it means every
+    // measurement sits exactly where the others predict. Printing it as
+    // "0.0000 cm" makes a clean result look like a failure.
+    const exact = result.scatter <= said / 100;
+
+    let text;
+    if (exact) {
+      text = "Your swatches agree with each other exactly.";
+    } else if (said > 0 && result.scatter > said * 2) {
+      text = "Your swatches disagree by about " + calAmount(result.scatter, unit) +
+        ", more than twice the " + calAmount(said, unit) + " you said you could " +
+        "measure to. Either something was mismeasured or the tension varied " +
+        "between them.";
+    } else {
+      text = "Your swatches disagree by about " + calAmount(result.scatter, unit) +
+        ", which is about what measuring to " + calAmount(said, unit) +
+        " would produce.";
+    }
+
+    if (result.scatter < said) {
+      // The error bars come from the claimed precision, not from this — worth
+      // saying, or they look needlessly pessimistic next to a tidy result.
+      text += " The error bars above still allow for the tape, since a few " +
+              "swatches cannot show better than you can measure.";
     }
     solutionNote(text);
+
+    // A spare swatch is only a check if it is a different shape. Repeats of a
+    // shape already in the set can tell you whether two identical swatches
+    // measured the same and nothing else, which is the weakest check there is
+    // — and it passes automatically if the same number was typed twice.
+    const shapes = new Set(measured.map(function (m) { return swatchKey(m.swatch); }));
+    if (shapes.size <= unknowns.length) {
+      solutionNote("The spare swatches are repeats of shapes already in the " +
+        "set, so all they can check is whether two identical swatches came out " +
+        "the same. A differently shaped one would check more.");
+    }
 
     // With spare swatches the fit can be checked against each one. A single
     // wild residual is far more likely to be one bad swatch than a bad model,
@@ -1500,6 +1554,7 @@ document.getElementById("applyCalibration").addEventListener("click", function (
 
   const applied = [];
   const spare = [];
+  const opened = [];
 
   for (const name of frozen.unknowns) {
     const target = destinationFor(name);
@@ -1511,11 +1566,21 @@ document.getElementById("applyCalibration").addEventListener("click", function (
       fromMetres(solution.values[name], target.unit).toFixed(3)
     );
     applied.push(name);
+
+    // Writing a figure into a closed section would leave it out of force, so
+    // the button would report success and change nothing — which is what it
+    // used to do. "Use these figures" has to mean used.
+    for (const name of openSectionsAround(target.input)) {
+      if (!opened.includes(name)) opened.push(name);
+    }
   }
 
   let text = applied.length === 0
     ? "None of these have anywhere to be written."
-    : "Written in: " + applied.join(", ") + ".";
+    : applied.join(", ") + " written in.";
+  if (opened.length > 0) {
+    text += " Opened " + opened.join(", ") + " so they take effect.";
+  }
   if (spare.length > 0) {
     text += " " + spare.join(", ") + " has no box to go in, so it has been " +
             "left out — it is solved again from the same measurements whenever " +
