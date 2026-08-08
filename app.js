@@ -133,6 +133,10 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
   const note = document.getElementById("castOnNote");
   const unit = castOnUnitInput.value;
 
+  // The measured figure shares the unit dropdown a row above it, which is far
+  // enough away to leave a bare number sitting there in no unit at all.
+  document.getElementById("setupUnitTag").textContent = unit;
+
   if (!(allowancePerStitch > 0) || !(stitches > 0)) {
     note.textContent = "";
     return;

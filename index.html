@@ -187,15 +187,18 @@
         <summary>I have measured casting on and binding off</summary>
 
         <div class="fields">
-          <label for="setupPerStitch">Both ends together</label>
-          <input type="number" id="setupPerStitch" value="3" step="0.1" min="0">
+          <label for="setupPerStitch">Cast on and bind off, per stitch</label>
+          <span class="withUnit">
+            <input type="number" id="setupPerStitch" value="3" step="0.1" min="0">
+            <span class="unitTag" id="setupUnitTag"></span>
+          </span>
         </div>
 
         <p class="hint">
-          Casting on and binding off cannot be told apart by measuring, so the
-          calibration panel finds them as one figure and writes it here. The
-          method above says how much of it is the cast-on, which is the half
-          that moves the pattern.
+          The two added together, because no swatch can tell them apart: every
+          swatch contains as many cast-on stitches as bind-off ones, so only
+          their sum can ever be measured. Take the cast-on figure above away
+          from this and what is left is the bind-off.
         </p>
       </details>
 
