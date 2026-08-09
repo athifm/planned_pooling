@@ -725,7 +725,49 @@ function updateTemplateMessage() {
 // What the template does to the rest of the form: locks the count boxes, or
 // gives them back. State only — no sizing and no drawing, so regenerate() can
 // call it first and then do those once for everybody.
+// A row pattern is written in stitch codes and decides what every stitch
+// costs, so it cannot be in force while the table those codes come from is put
+// away — that would leave a visible yarn-per-stitch box being ignored by an
+// invisible table, which is the one thing the open/closed rule exists to stop.
+//
+// This used to be enforced by nesting the pattern inside the table, which held
+// but put a design control among the measurements. So it is a rule now instead
+// of a shape, and it says so rather than happening quietly.
+function syncTemplateDependency() {
+  const pattern = document.querySelector('[data-section="template"]');
+  const types = document.querySelector('[data-section="stitchTypes"]');
+  const note = document.getElementById("templateDependency");
+
+  if (!pattern.open) {
+    note.textContent = "";
+    return;
+  }
+
+  // Setting open fires a toggle, which regenerates again — and finds it
+  // already open, so it settles at once.
+  if (!types.open) types.open = true;
+
+  note.textContent =
+    "The stitch table is open alongside this, because a pattern is written " +
+    "in its codes and takes its figures from it.";
+}
+
+// The codes as they stand, so a pattern can be written without scrolling back
+// to the table to remember what you called things.
+function updateCodeLegend() {
+  const legend = document.getElementById("codeLegend");
+  const codes = typeNamesByCode();
+  const names = Object.keys(codes);
+
+  legend.textContent = names.length === 0
+    ? "No stitch has a code yet — give one to each in the stitch table."
+    : names.map(function (code) { return code + " = " + codes[code]; }).join("   ");
+}
+
 function syncTemplateState() {
+  syncTemplateDependency();
+  updateCodeLegend();
+
   const active = templateActive();
 
   // A template states the fabric's size in both directions, so neither box is
@@ -875,10 +917,11 @@ function showProblems(found) {
 function regenerate(options) {
   const sizeFrom = (options && options.sizeFrom) || "counts";
 
-  // First, because everything after it depends on which sections are in force.
-  reflectSections();
-  // Then this, because it decides what the counts are.
+  // First, because it decides what the counts are — and because it can open a
+  // section, which the mirroring below has to see rather than run a step
+  // behind and leave the wrong controls on screen for a frame.
   syncTemplateState();
+  reflectSections();
 
   const found = problems();
   showProblems(found);

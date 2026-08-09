@@ -199,6 +199,41 @@
       </details>
     </fieldset>
 
+    <!-- A design decision, not a measurement, which is why it sits with
+         construction rather than among the panels about what yarn and hands
+         do. It is the detailed form of the stitch and row counts, the way the
+         stitch table is the detailed form of one yarn-per-stitch figure. -->
+    <details class="panelSection" data-section="template">
+      <summary>Row pattern</summary>
+
+      <p class="hint">
+        One entry per box. <code>3k</code> means three knits.
+        A <code>*</code> before a stitch opens a group and one after it
+        closes the group, followed by how many times — so
+        <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is
+        a 140&nbsp;stitch row with slipped edges.
+        Enter, space or Tab moves to the next box.
+        The strip above counts stitches as you go; while a group is open it
+        counts the group instead, and clears once you close it.
+      </p>
+
+      <p class="hint" id="codeLegend"></p>
+
+      <div id="templateRows"></div>
+      <button type="button" id="addTemplateRow">+ Add row</button>
+
+      <p class="hint">
+        Rows are worked once unless you mark a repeat. Tick <b>start</b> on
+        the first row of a block and <b>end</b> on the last, then say how
+        many times — tick both on one row to repeat just that row. The
+        pattern then states the whole fabric, so the stitch and row counts
+        follow from it. Every row has to come out the same width.
+      </p>
+      <p class="hint" id="templateResult"></p>
+
+      <p class="hint" id="templateDependency"></p>
+    </details>
+
     <fieldset id="stitches">
       <legend>Stitches</legend>
 
@@ -250,38 +285,7 @@
           <label for="activeType">Stitch used</label>
           <select id="activeType"></select>
         </div>
-        <p class="hint">Used unless the template below says otherwise.</p>
-
-        <!-- Nested on purpose: a template is written in stitch codes, so it
-             cannot mean anything with the table put away. Closing the parent
-             closes this too, which is a rule the shape enforces rather than
-             one the code has to remember. -->
-        <details class="subSection" data-section="template">
-          <summary>Build rows from a template</summary>
-
-          <p class="hint">
-            One entry per box. <code>3k</code> means three knits.
-            A <code>*</code> before a stitch opens a group and one after it
-            closes the group, followed by how many times — so
-            <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is
-            a 140&nbsp;stitch row with slipped edges.
-            Enter, space or Tab moves to the next box.
-            The strip above counts stitches as you go; while a group is open it
-            counts the group instead, and clears once you close it.
-          </p>
-
-          <div id="templateRows"></div>
-          <button type="button" id="addTemplateRow">+ Add row</button>
-
-          <p class="hint">
-            Rows are worked once unless you mark a repeat. Tick <b>start</b> on
-            the first row of a block and <b>end</b> on the last, then say how
-            many times — tick both on one row to repeat just that row. The
-            template then states the whole fabric, so the stitch and row counts
-            follow from it. Every row has to come out the same width.
-          </p>
-          <p class="hint" id="templateResult"></p>
-        </details>
+        <p class="hint">Used unless a row pattern says otherwise.</p>
       </details>
     </fieldset>
 
