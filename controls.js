@@ -317,7 +317,12 @@ function addTypeRow(name, code, perStitch) {
   remove.addEventListener("click", function () {
     // The fabric has to be knitted in something.
     if (typeRows.children.length > 1) {
+      const goneName = nameBox.value;
+      const goneCode = codeBox.value.trim().toLowerCase();
+
       row.remove();
+      replaceRemovedType(goneName, goneCode);
+
       refreshTypeChoices();
       refreshCalTypes();
       updateAllRowCounts();
@@ -330,6 +335,46 @@ function addTypeRow(name, code, perStitch) {
   row.appendChild(amount);
   row.appendChild(remove);
   typeRows.appendChild(row);
+}
+
+// Swap one stitch code for another inside a single template cell.
+//
+// A cell can hold more than one idea — "3p*23" is a count, a code, a group
+// close and a repeat — so it is taken apart with the same splitter the parser
+// uses and put back together. Only the atom that is exactly this code changes;
+// the bare number after a "*" is a repeat count and must be left alone.
+function swapCodeInCell(cell, from, to) {
+  return splitCell(cell).map(function (atom) {
+    const parts = /^(\d*)([a-z]+)$/i.exec(atom);
+    if (parts && parts[2].toLowerCase() === from) return parts[1] + to;
+    return atom;
+  }).join("");
+}
+
+// A removed stitch does not simply vanish. Its code may be written into rows
+// of the pattern, where it would stop meaning anything and take the whole
+// template down with it — one deleted row for an error message about a token
+// you cannot see. So every mention becomes the first surviving stitch, which
+// is knit unless knit is the one you removed.
+function replaceRemovedType(goneName, goneCode) {
+  const survivors = readTypes();
+  if (survivors.length === 0) return;
+
+  const standIn = survivors.find(function (t) { return t.code; }) || survivors[0];
+
+  // Without a code there is nothing to write in the pattern, so leave the
+  // tokens as they are and let the template say what is wrong.
+  if (goneCode && standIn.code) {
+    for (const cell of templateRowsBox.querySelectorAll(".templateCell")) {
+      cell.value = swapCodeInCell(cell.value, goneCode, standIn.code);
+    }
+  }
+
+  // The dropdown is rebuilt after this, so it is the value that has to move —
+  // a selection naming a stitch that no longer exists would silently fall back
+  // to whatever happened to be in the same position.
+  const rowsAre = document.getElementById("rowsAre");
+  if (rowsAre.value === goneName) rowsAre.value = standIn.name;
 }
 
 function setTypeRows(types) {
