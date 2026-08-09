@@ -7,7 +7,6 @@ const zoomInput       = document.getElementById("zoom");
 const stitchesInput   = document.getElementById("stitches");
 const rowsInput       = document.getElementById("rows");
 const perStitchInput  = document.getElementById("perStitch");
-const perStitchUnitInput = document.getElementById("perStitchUnit");
 const stitchWidthInput = document.getElementById("stitchWidth");
 const rowHeightInput   = document.getElementById("rowHeight");
 const gaugeUnitInput   = document.getElementById("gaugeUnit");
@@ -27,7 +26,6 @@ const castOnMeasuredInput = document.getElementById("castOnMeasured");
 const bindOffMeasuredInput = document.getElementById("bindOffMeasured");
 const castOnUnitInput = document.getElementById("castOnUnit");
 const turnInput = document.getElementById("turnPerRow");
-const turnUnitInput = document.getElementById("turnUnit");
 
 // The three figures the solver finds that are not stitches, named as
 // calibration.js names them. Each lives with the thing it is an allowance for,
@@ -37,7 +35,7 @@ const CAST_ON_FIGURE = "castOn";
 const BIND_OFF_FIGURE = "bindOff";
 
 function turnMetres() {
-  return toMetres(num(turnInput), turnUnitInput.value);
+  return toMetres(num(turnInput), typeUnitInput.value);
 }
 
 function measuredCastOnMetres() {
@@ -69,14 +67,13 @@ function isCircular() {
 const SECTION_NAMES = {
   display: "Display",
   stitchTypes: "Stitches",
-  template: "Row pattern",
   calibration: "Calibration",
 };
 
 const SECTIONS = [
   "display",      // zoom
   "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
-  "template",     // rows built from a pattern
+
   "calibration",  // measuring your own figures from swatches
 ];
 
@@ -143,7 +140,7 @@ function updateTurningNote(perTurn, rows) {
     return;
   }
 
-  const unit = turnUnitInput.value;
+  const unit = typeUnitInput.value;
   const each = fromMetres(perTurn, unit);
   const total = perTurn * rows;
   note.textContent =
@@ -187,7 +184,26 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
 }
 
 function templateActive() {
-  return sectionOpen("template");
+  return document.getElementById("rowsAre").value === TEMPLATE_CHOICE;
+}
+
+// The single yarn-per-stitch box is a view onto the selected type's row, not a
+// value of its own. One cost per named stitch, wherever you happen to be
+// looking at it — the box is just the short way to see it when the whole table
+// is more than you need.
+//
+// Pushed rather than bound: the box writes to the row on change, and this
+// copies back on every pass, so the two cannot drift.
+function syncStitchFigure() {
+  const row = selectedTypeRow();
+  if (!row) return;
+  perStitchInput.value = row.querySelector(".typeAmount").value;
+}
+
+function stitchFigureEdited() {
+  const row = selectedTypeRow();
+  if (!row) return;
+  row.querySelector(".typeAmount").value = perStitchInput.value;
 }
 
 function turningActive() {
@@ -222,9 +238,11 @@ function endAllowanceMetres() {
 function inEffect() {
   return {
     zoom: sectionOpen("display") ? num(zoomInput) : DEFAULT_SETTINGS.zoom,
-    consumptionMetres: sectionOpen("stitchTypes")
-      ? activeTypeMetres()
-      : toMetres(num(perStitchInput), perStitchUnitInput.value),
+    // One source now, open or closed: the table holds every stitch's cost, and
+    // closing it hides rows rather than switching them off. What keeps the
+    // visible-is-in-force rule is that the selected row is always on show, as
+    // the figure at the top of the panel.
+    consumptionMetres: activeTypeMetres(),
     template: templateActive(),
     turnMetres: turningActive() ? turnMetres() : 0,
     castOnMetres: castOnMetres(),
@@ -232,10 +250,12 @@ function inEffect() {
   };
 }
 
-// How much yarn the currently selected stitch type uses, in metres.
+// How much yarn the currently selected stitch type uses, in metres. Meaningless
+// while a pattern is chosen, and unused then — layer 2 asks the pattern
+// instead, type by type.
 function activeTypeMetres() {
   const types = readTypes();
-  const wanted = document.getElementById("activeType").value;
+  const wanted = document.getElementById("rowsAre").value;
   const chosen = types.find(function (t) { return t.name === wanted; }) || types[0];
   if (!chosen) return 0;
   return toMetres(chosen.perStitch, document.getElementById("typeUnit").value);
@@ -720,20 +740,17 @@ function updateTemplateMessage() {
 // What the template does to the rest of the form: locks the count boxes, or
 // gives them back. State only — no sizing and no drawing, so regenerate() can
 // call it first and then do those once for everybody.
-// A row pattern is written in stitch codes and decides what every stitch
-// costs, so it cannot be in force while the table those codes come from is put
-// away — that would leave a visible yarn-per-stitch box being ignored by an
-// invisible table, which is the one thing the open/closed rule exists to stop.
+// One stitch at a time, only its own cost is in force, and that is the figure
+// at the top of the Stitches panel — visible whether the table is open or not.
+// A pattern is different: it uses every type's cost at once, so leaving the
+// table shut would let figures nobody can see decide the fabric.
 //
-// This used to be enforced by nesting the pattern inside the table, which held
-// but put a design control among the measurements. So it is a rule now instead
-// of a shape, and it says so rather than happening quietly.
+// So a pattern opens the table, and says why rather than doing it quietly.
 function syncTemplateDependency() {
-  const pattern = document.querySelector('[data-section="template"]');
   const types = document.querySelector('[data-section="stitchTypes"]');
   const note = document.getElementById("templateDependency");
 
-  if (!pattern.open) {
+  if (!templateActive()) {
     note.textContent = "";
     return;
   }
@@ -743,8 +760,8 @@ function syncTemplateDependency() {
   if (!types.open) types.open = true;
 
   note.textContent =
-    "The stitch table is open alongside this, because a pattern is written " +
-    "in its codes and takes its figures from it.";
+    "The stitch table is open because a pattern uses every stitch's figure, " +
+    "not just one of them.";
 }
 
 // The codes as they stand, so a pattern can be written without scrolling back
@@ -762,8 +779,10 @@ function updateCodeLegend() {
 function syncTemplateState() {
   syncTemplateDependency();
   updateCodeLegend();
+  syncStitchFigure();
 
   const active = templateActive();
+  document.body.classList.toggle("patterned", active);
 
   // A template states the fabric's size in both directions, so neither box is
   // the user's to edit and there is nothing for the grips to drag.
@@ -838,6 +857,10 @@ function problems() {
   // A stitch that eats no yarn never advances along the ball, so every stitch
   // after it would come out the same colour. The turning and cast-on
   // allowances may legitimately be zero, which is why they are not here.
+  //
+  // With the table shut only the selected stitch is in force, and the figure
+  // at the top of the panel is where it is on show — so that is what gets
+  // marked, rather than a row nobody can see.
   if (sectionOpen("stitchTypes")) {
     for (const row of typeRows.querySelectorAll(".typeRow")) {
       const box = row.querySelector(".typeAmount");
@@ -847,13 +870,10 @@ function problems() {
     bad(perStitchInput, "A stitch has to use some yarn.");
   }
 
-  // The template states the whole fabric, so if it cannot be read there is no
+  // The pattern states the whole fabric, so if it cannot be read there is no
   // fabric. Its own message box already says what is wrong with it in detail.
   if (templateActive() && currentTemplate().error) {
-    bad(
-      document.querySelector('[data-section="template"] > summary'),
-      "The template below cannot be read."
-    );
+    bad(document.getElementById("rowsAre"), "The pattern below cannot be read.");
   }
 
   return found;
@@ -968,13 +988,6 @@ castOnUnitInput.addEventListener("change", function () {
   previousCastOnUnit = unit;
 });
 
-let previousTurnUnit = turnUnitInput.value;
-
-turnUnitInput.addEventListener("change", function () {
-  const unit = turnUnitInput.value;
-  convertBoxes([turnInput], previousTurnUnit, unit);
-  previousTurnUnit = unit;
-});
 
 // Gauge from a knitted sample. The millimetre boxes stay the source of truth;
 // this only fills them in, so the arithmetic stays visible rather than hidden.
@@ -1539,7 +1552,7 @@ function showSolution() {
 // the one place that has to know the difference.
 function destinationFor(name) {
   if (name === TURN_FIGURE) {
-    return { input: turnInput, unit: turnUnitInput.value };
+    return { input: turnInput, unit: typeUnitInput.value };
   }
   if (name === CAST_ON_FIGURE) {
     return { input: castOnMeasuredInput, unit: castOnUnitInput.value };
@@ -1713,14 +1726,6 @@ document.getElementById("applyFadeAll").addEventListener("click", function () {
   regenerate();
 });
 
-let previousPerStitchUnit = perStitchUnitInput.value;
-
-perStitchUnitInput.addEventListener("change", function () {
-  const unit = perStitchUnitInput.value;
-  convertBoxes([perStitchInput], previousPerStitchUnit, unit);
-  previousPerStitchUnit = unit;
-});
-
 // Gauge boxes: converting them keeps the fabric the same size on screen, so
 // switching to inches is purely a change of notation.
 let previousGaugeUnit = gaugeUnitInput.value;
@@ -1746,19 +1751,25 @@ swatchUnitInput.addEventListener("change", function () {
 
 document.getElementById("addColor").addEventListener("click", regenerate);
 
-// Stitch types. Renaming one changes what the "stitch used" dropdown offers,
-// so the list is rebuilt on any change inside the table.
+// Renaming a stitch changes what the "every row is" dropdown offers, so the
+// list is rebuilt on any change inside the table.
 const typeUnitInput = document.getElementById("typeUnit");
 let previousTypeUnit = typeUnitInput.value;
 
+// One unit for everything the panel measures — every stitch and the turn.
 typeUnitInput.addEventListener("change", function () {
   const unit = typeUnitInput.value;
   convertBoxes(typeRows.querySelectorAll(".typeAmount"), previousTypeUnit, unit);
+  convertBoxes([turnInput], previousTypeUnit, unit);
   previousTypeUnit = unit;
   // Converting leaves every consumption the same physical length, so the plan
   // does not change — but it is reported in this unit, so it has to be redrawn.
   refreshPrescription();
 });
+
+// The figure at the top of the panel is the selected type's row seen from
+// outside, so editing it edits the row.
+perStitchInput.addEventListener("change", stitchFigureEdited);
 
 typeRows.addEventListener("change", function () {
   refreshTypeChoices();
@@ -1818,13 +1829,11 @@ pageBox.addEventListener("toggle", function () {
 // silently mangle the numbers. So re-read the baselines after restoring.
 function syncUnitBaselines() {
   previousLengthUnit = lengthUnitInput.value;
-  previousPerStitchUnit = perStitchUnitInput.value;
   previousGaugeUnit = gaugeUnitInput.value;
   previousSwatchUnit = swatchUnitInput.value;
   previousTypeUnit = typeUnitInput.value;
   previousCalUnit = calUnitInput.value;
   previousCastOnUnit = castOnUnitInput.value;
-  previousTurnUnit = turnUnitInput.value;
 }
 
 applySettings(loadSettings());

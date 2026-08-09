@@ -405,8 +405,22 @@ input[type="color"] {
 /* One figure for the whole fabric, replaced by the table when that is opened.
    Not merely supplemented: two controls claiming the same job, with only one
    of them listened to, is the thing inEffect() exists to prevent. */
-body.open-stitchTypes .oneStitchOnly {
+/* The short view of one row of the table. Put away once the whole table is on
+   show, or once a pattern means no single stitch is in force — either way it
+   would be a second control for a job already done. */
+body.open-stitchTypes .oneStitchOnly,
+body.patterned .oneStitchOnly {
   display: none;
+}
+
+/* The pattern editor, shown by the choice above it rather than by a disclosure:
+   these are two answers to one question, not a detail hidden inside one. */
+.templateOnly {
+  display: none;
+}
+
+body.patterned .templateOnly {
+  display: block;
 }
 
 /* Nothing turns in the round, so the turn figure is not merely inactive there

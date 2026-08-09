@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 21;
+const SETTINGS_VERSION = 22;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -40,8 +40,6 @@ const DEFAULT_SETTINGS = {
   joinStitch: "",
   stitches: 140,
   rows: 50,
-  perStitch: 5,
-  perStitchUnit: "cm",
   stitchWidth: 4.5,
   rowHeight: 3.3,
   gaugeUnit: "mm",
@@ -64,7 +62,9 @@ const DEFAULT_SETTINGS = {
     { name: "slipped", code: "s", perStitch: 2.5 },
   ],
   typeUnit: "cm",
-  activeType: "knit",
+  // Either a stitch type name or the pattern sentinel: one control, because
+  // "what goes in a row" is one question.
+  rowsAre: "knit",
   // Which sections have been opened. A closed section keeps its values but
   // does not apply them, so this is part of what is in force rather than a
   // note about the furniture.
@@ -73,7 +73,6 @@ const DEFAULT_SETTINGS = {
   // it — which is how a knitter who never thinks about turning gets a fabric
   // that does not count it.
   turnPerRow: 0,
-  turnUnit: "cm",
   // Not optional the way counting turns is — every fabric is cast on and bound
   // off, so there is no switch here, only how much each costs. They share a
   // unit, being the same kind of measurement side by side.
@@ -157,8 +156,6 @@ function readSettings() {
     joinStitch: fieldValue("joinStitch"),
     stitches: fieldNumber("stitches"),
     rows: fieldNumber("rows"),
-    perStitch: fieldNumber("perStitch"),
-    perStitchUnit: fieldValue("perStitchUnit"),
     stitchWidth: fieldNumber("stitchWidth"),
     rowHeight: fieldNumber("rowHeight"),
     gaugeUnit: fieldValue("gaugeUnit"),
@@ -170,12 +167,11 @@ function readSettings() {
     construction: document.querySelector("input[name=construction]:checked").value,
     types: readTypes(),
     typeUnit: fieldValue("typeUnit"),
-    activeType: fieldValue("activeType"),
+    rowsAre: fieldValue("rowsAre"),
     openSections: [...document.querySelectorAll("[data-section]")]
       .filter(function (box) { return box.open; })
       .map(function (box) { return box.dataset.section; }),
     turnPerRow: fieldNumber("turnPerRow"),
-    turnUnit: fieldValue("turnUnit"),
     castOnMeasured: fieldNumber("castOnMeasured"),
     bindOffMeasured: fieldNumber("bindOffMeasured"),
     castOnUnit: fieldValue("castOnUnit"),
@@ -210,8 +206,6 @@ function applySettings(s) {
   document.getElementById("lengthUnit").value = s.lengthUnit;
   document.getElementById("stitches").value = s.stitches;
   document.getElementById("rows").value = s.rows;
-  document.getElementById("perStitch").value = s.perStitch;
-  document.getElementById("perStitchUnit").value = s.perStitchUnit;
   document.getElementById("stitchWidth").value = s.stitchWidth;
   document.getElementById("rowHeight").value = s.rowHeight;
   document.getElementById("gaugeUnit").value = s.gaugeUnit;
@@ -231,7 +225,7 @@ function applySettings(s) {
   // The dropdown's options come from the rows, so it has to be rebuilt before
   // a value can be selected in it.
   refreshTypeChoices();
-  document.getElementById("activeType").value = s.activeType;
+  document.getElementById("rowsAre").value = s.rowsAre;
 
   // Mirrors the type table, so it can only be built once that exists.
   refreshCalTypes(s.calTypes);
@@ -256,7 +250,6 @@ function applySettings(s) {
   }
 
   document.getElementById("turnPerRow").value = s.turnPerRow;
-  document.getElementById("turnUnit").value = s.turnUnit;
   document.getElementById("castOnMeasured").value = s.castOnMeasured;
   document.getElementById("bindOffMeasured").value = s.bindOffMeasured;
   document.getElementById("castOnUnit").value = s.castOnUnit;

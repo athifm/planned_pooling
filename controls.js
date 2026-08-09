@@ -363,10 +363,19 @@ function typeNamesByCode() {
   return map;
 }
 
-// The "stitch used" dropdown lists whatever types currently exist, so it has to
-// be rebuilt whenever a type is added, removed or renamed.
+// The value that means "not a single stitch — read the pattern below". A name
+// no stitch can have, since a type's name is whatever was typed in the table
+// and this is not typeable.
+const TEMPLATE_CHOICE = " template";
+
+// The "every row is" dropdown: every stitch type, then the pattern. One
+// control for one question — what goes in a row — with the simple answer and
+// the complicated one in the same list.
+//
+// Rebuilt whenever a type is added, removed or renamed, since those are its
+// options.
 function refreshTypeChoices() {
-  const select = document.getElementById("activeType");
+  const select = document.getElementById("rowsAre");
   const wanted = select.value;
   const wantedIndex = select.selectedIndex;
   const types = readTypes();
@@ -379,6 +388,16 @@ function refreshTypeChoices() {
     select.appendChild(option);
   }
 
+  const pattern = document.createElement("option");
+  pattern.value = TEMPLATE_CHOICE;
+  pattern.textContent = "worked from a pattern";
+  select.appendChild(pattern);
+
+  if (wanted === TEMPLATE_CHOICE) {
+    select.value = wanted;
+    return;
+  }
+
   // Keep the selection if that name still exists. If it does not, the usual
   // cause is that the selected type was just renamed — so hold the same
   // position in the list rather than jumping back to the first type.
@@ -388,6 +407,17 @@ function refreshTypeChoices() {
   } else if (types.length) {
     select.selectedIndex = Math.min(Math.max(wantedIndex, 0), types.length - 1);
   }
+}
+
+// The table row for whichever stitch is selected, or null when a pattern is.
+function selectedTypeRow() {
+  const wanted = document.getElementById("rowsAre").value;
+  if (wanted === TEMPLATE_CHOICE) return null;
+
+  const rows = [...typeRows.querySelectorAll(".typeRow")];
+  return rows.find(function (row) {
+    return row.querySelector(".typeName").value === wanted;
+  }) || rows[0] || null;
 }
 
 document.getElementById("addType").addEventListener("click", function () {

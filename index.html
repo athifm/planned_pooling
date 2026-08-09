@@ -180,58 +180,29 @@
 
     </fieldset>
 
-    <!-- A design decision, not a measurement, which is why it sits with
-         construction rather than among the panels about what yarn and hands
-         do. It is the detailed form of the stitch and row counts, the way the
-         stitch table is the detailed form of one yarn-per-stitch figure. -->
-    <details class="panelSection" data-section="template">
-      <summary>Row pattern</summary>
-
-      <p class="hint">
-        One entry per box. <code>3k</code> means three knits.
-        A <code>*</code> before a stitch opens a group and one after it
-        closes the group, followed by how many times — so
-        <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is
-        a 140&nbsp;stitch row with slipped edges.
-        Enter, space or Tab moves to the next box.
-        The strip above counts stitches as you go; while a group is open it
-        counts the group instead, and clears once you close it.
-      </p>
-
-      <p class="hint" id="codeLegend"></p>
-
-      <div id="templateRows"></div>
-      <button type="button" id="addTemplateRow">+ Add row</button>
-
-      <p class="hint">
-        Rows are worked once unless you mark a repeat. Tick <b>start</b> on
-        the first row of a block and <b>end</b> on the last, then say how
-        many times — tick both on one row to repeat just that row. The
-        pattern then states the whole fabric, so the stitch and row counts
-        follow from it. Every row has to come out the same width.
-      </p>
-      <p class="hint" id="templateResult"></p>
-
-      <p class="hint" id="templateDependency"></p>
-    </details>
-
     <fieldset id="stitches">
       <legend>Stitches</legend>
 
-      <!-- The whole fabric in one figure. Replaced, not merely supplemented,
-           once the table below is opened. -->
+      <!-- One unit for everything this panel measures: the figure below, every
+           row of the table, and the turn. They are all a length of yarn per
+           one of something. -->
+      <div class="fields">
+        <label for="typeUnit">Measured in</label>
+        <select id="typeUnit">
+          <option value="m">metres</option>
+          <option value="cm" selected>centimetres</option>
+          <option value="ft">feet</option>
+          <option value="yd">yards</option>
+          <option value="in">inches</option>
+        </select>
+      </div>
+
+      <!-- Not a value of its own: a view onto whichever type the Rows panel
+           has selected. There is one cost per named stitch, and this is the
+           short way to see it when the whole table is more than you need. -->
       <div class="fields oneStitchOnly">
         <label for="perStitch">Yarn per stitch</label>
-        <span class="withUnit">
-          <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
-          <select id="perStitchUnit" aria-label="Yarn per stitch unit">
-            <option value="m">metres</option>
-            <option value="cm" selected>centimetres</option>
-            <option value="ft">feet</option>
-            <option value="yd">yards</option>
-            <option value="in">inches</option>
-          </select>
-        </span>
+        <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
       </div>
 
       <!-- Not a stitch, but the same kind of declaration: yarn spent per turn
@@ -241,16 +212,7 @@
            having to say so. -->
       <div class="fields flatOnly">
         <label for="turnPerRow">Yarn per turn</label>
-        <span class="withUnit">
-          <input type="number" id="turnPerRow" value="0" step="0.1" min="0">
-          <select id="turnUnit" aria-label="Yarn per turn unit">
-            <option value="m">metres</option>
-            <option value="cm" selected>centimetres</option>
-            <option value="ft">feet</option>
-            <option value="yd">yards</option>
-            <option value="in">inches</option>
-          </select>
-        </span>
+        <input type="number" id="turnPerRow" value="0" step="0.1" min="0">
       </div>
       <p class="hint flatOnly" id="turningNote"></p>
 
@@ -262,17 +224,6 @@
           rough starting points — measure your own to get real predictions.
         </p>
 
-        <div class="fields">
-          <label for="typeUnit">Yarn per stitch in</label>
-          <select id="typeUnit">
-            <option value="m">metres</option>
-            <option value="cm" selected>centimetres</option>
-            <option value="ft">feet</option>
-            <option value="yd">yards</option>
-            <option value="in">inches</option>
-          </select>
-        </div>
-
         <div class="typeHeader">
           <span>Name</span>
           <span>Code</span>
@@ -281,13 +232,46 @@
         </div>
         <div id="typeRows"></div>
         <button type="button" id="addType">+ Add stitch type</button>
-
-        <div class="fields typeChoice">
-          <label for="activeType">Stitch used</label>
-          <select id="activeType"></select>
-        </div>
-        <p class="hint">Used unless a row pattern says otherwise.</p>
       </details>
+    </fieldset>
+
+    <!-- What goes in a row: one stitch all the way, or a written pattern. Both
+         answers to one question, so both live behind one control. -->
+    <fieldset id="rows">
+      <legend>Rows</legend>
+
+      <div class="fields">
+        <label for="rowsAre">Every row is</label>
+        <select id="rowsAre"></select>
+      </div>
+
+      <div class="templateOnly">
+        <p class="hint">
+          One entry per box. <code>3k</code> means three knits.
+          A <code>*</code> before a stitch opens a group and one after it
+          closes the group, followed by how many times — so
+          <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> is
+          a 140&nbsp;stitch row with slipped edges.
+          Enter, space or Tab moves to the next box.
+          The strip above counts stitches as you go; while a group is open it
+          counts the group instead, and clears once you close it.
+        </p>
+
+        <p class="hint" id="codeLegend"></p>
+
+        <div id="templateRows"></div>
+        <button type="button" id="addTemplateRow">+ Add row</button>
+
+        <p class="hint">
+          Rows are worked once unless you mark a repeat. Tick <b>start</b> on
+          the first row of a block and <b>end</b> on the last, then say how
+          many times — tick both on one row to repeat just that row. The
+          pattern then states the whole fabric, so the stitch and row counts
+          follow from it. Every row has to come out the same width.
+        </p>
+        <p class="hint" id="templateResult"></p>
+        <p class="hint" id="templateDependency"></p>
+      </div>
     </fieldset>
 
     <fieldset id="castOn">
