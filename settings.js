@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 20;
+const SETTINGS_VERSION = 21;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -69,8 +69,10 @@ const DEFAULT_SETTINGS = {
   // does not apply them, so this is part of what is in force rather than a
   // note about the furniture.
   openSections: [],
-  // Charged per row, in the Construction panel with the choice it belongs to.
-  turnPerRow: 1,
+  // Charged per row rather than per stitch, and zero until someone measures
+  // it — which is how a knitter who never thinks about turning gets a fabric
+  // that does not count it.
+  turnPerRow: 0,
   turnUnit: "cm",
   // Not optional the way counting turns is — every fabric is cast on and bound
   // off, so there is no switch here, only how much each costs. They share a

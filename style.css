@@ -409,6 +409,12 @@ body.open-stitchTypes .oneStitchOnly {
   display: none;
 }
 
+/* Nothing turns in the round, so the turn figure is not merely inactive there
+   — it has nothing to describe. */
+body.circular .flatOnly {
+  display: none;
+}
+
 .typeRow,
 .typeHeader {
   display: grid;

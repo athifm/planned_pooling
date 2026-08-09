@@ -69,16 +69,14 @@ function isCircular() {
 const SECTION_NAMES = {
   display: "Display",
   stitchTypes: "Stitches",
-  template: "Row template",
-  turning: "Turning",
+  template: "Row pattern",
   calibration: "Calibration",
 };
 
 const SECTIONS = [
   "display",      // zoom
   "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
-  "template",     // rows built from a template
-  "turning",      // yarn spent turning at each row end
+  "template",     // rows built from a pattern
   "calibration",  // measuring your own figures from swatches
 ];
 
@@ -138,12 +136,8 @@ function updateTurningNote(perTurn, rows) {
   const note = document.getElementById("turningNote");
   document.body.classList.toggle("turning", perTurn > 0);
 
-  if (!sectionOpen("turning")) { note.textContent = ""; return; }
-
-  if (isCircular()) {
-    note.textContent = "Knitting in the round never turns, so nothing is added.";
-    return;
-  }
+  // Circular hides the box entirely, so there is nothing to explain; and zero
+  // is the resting state rather than a problem worth a sentence.
   if (perTurn <= 0) {
     note.textContent = "";
     return;
@@ -197,12 +191,11 @@ function templateActive() {
 }
 
 function turningActive() {
-  // Opening the section is what switches this on — there is no separate tick,
-  // because a checkbox inside a disclosure would be two ways to say the same
-  // thing and could disagree.
-  //
-  // Knitting in the round never turns the work, so there is nothing to charge.
-  return sectionOpen("turning") && !isCircular();
+  // Nothing to decide. Knitting in the round never turns the work, and flat
+  // knitting always does — so the only question is what a turn costs, and a
+  // figure of zero answers it for anyone who has not measured one. Asking as
+  // well would be asking twice.
+  return !isCircular();
 }
 
 // Yarn per stitch spent casting on, in metres.
@@ -454,6 +447,8 @@ function draw() {
   // Unrolled, a tube's seam shows at both edges — they are the same line.
   const seams = circular ? [0, stitches] : null;
   canvasArea.classList.toggle("hasSeam", circular);
+  // Controls that only mean something when the work is turned.
+  document.body.classList.toggle("circular", circular);
 
   // Layer 2 answers per stitch. With a template that answer varies across the
   // row; without one it is the same for every stitch.
