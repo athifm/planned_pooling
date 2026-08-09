@@ -184,21 +184,28 @@
       </div>
 
       <details class="subSection" data-section="castOn">
-        <summary>I have measured casting on and binding off</summary>
+        <summary>I have measured these</summary>
 
         <div class="fields">
-          <label for="setupPerStitch">Cast on and bind off, per stitch</label>
+          <label for="castOnMeasured">Casting on, per stitch</label>
           <span class="withUnit">
-            <input type="number" id="setupPerStitch" value="3" step="0.1" min="0">
-            <span class="unitTag" id="setupUnitTag"></span>
+            <input type="number" id="castOnMeasured" value="2.5" step="0.1" min="0">
+            <span class="unitTag" id="castOnMeasuredTag"></span>
+          </span>
+
+          <label for="bindOffMeasured">Binding off, per stitch</label>
+          <span class="withUnit">
+            <input type="number" id="bindOffMeasured" value="1.5" step="0.1" min="0">
+            <span class="unitTag" id="bindOffMeasuredTag"></span>
           </span>
         </div>
 
         <p class="hint">
-          The two added together, because no swatch can tell them apart: every
-          swatch contains as many cast-on stitches as bind-off ones, so only
-          their sum can ever be measured. Take the cast-on figure above away
-          from this and what is left is the bind-off.
+          Calibration writes both of these. It can tell them apart because one
+          of the swatches it asks for is left on the needle — that one has a
+          cast-on and no bind-off, which is the only place in the whole set
+          where the two appear in different proportions. Once these are here
+          the method above is only a starting guess, and stops being used.
         </p>
       </details>
 

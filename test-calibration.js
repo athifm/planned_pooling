@@ -60,11 +60,11 @@ check("gridFrom(10,40,4) spreads geometrically",
 const flat = { stitches: 20, rows: 10, circular: false, pattern: ["knit"] };
 const tube = { stitches: 20, rows: 10, circular: true, pattern: ["knit"] };
 
-check("flat swatch: 200 knit, 9 turns, 20 setup",
-  swatchRow(flat, ["knit", "turn", "setup"]).join(",") === "200,9,20",
-  swatchRow(flat, ["knit", "turn", "setup"]).join(","));
+check("flat swatch: 200 knit, 9 turns, 20 cast on",
+  swatchRow(flat, ["knit", "turn", "castOn"]).join(",") === "200,9,20",
+  swatchRow(flat, ["knit", "turn", "castOn"]).join(","));
 check("the same swatch worked in the round has no turns at all",
-  swatchRow(tube, ["knit", "turn", "setup"]).join(",") === "200,0,20");
+  swatchRow(tube, ["knit", "turn", "castOn"]).join(",") === "200,0,20");
 
 const mixed = { stitches: 10, rows: 4, circular: false, pattern: ["knit", "knit", "knit", "slipped"] };
 check("a pattern cycles and may run out mid-row (10 sts -> 8 knit, 2 slipped)",
@@ -125,8 +125,10 @@ check("invertMatrix returns null when singular", invertMatrix([[1, 2], [2, 4]]) 
 group("exact recovery from invented swatches");
 
 // The figures the solver is supposed to rediscover, in metres.
-const truth = { knit: 0.05, purl: 0.055, slipped: 0.025, turn: 0.01, setup: 0.02 };
-const unknowns = ["knit", "purl", "slipped", "turn", "setup"];
+const truth = {
+  knit: 0.05, purl: 0.055, slipped: 0.025, turn: 0.01, castOn: 0.02, bindOff: 0.012,
+};
+const unknowns = ["knit", "purl", "slipped", "turn", "castOn", "bindOff"];
 
 // What this swatch would measure if `truth` were the real yarn behaviour.
 function fabricate(swatch, noise) {
@@ -143,6 +145,9 @@ const shapes = [
   { stitches: 30, rows: 15, circular: true, pattern: ["knit", "knit", "knit", "slipped"] },
   { stitches: 20, rows: 30, circular: false, pattern: ["knit", "slipped"] },
   { stitches: 40, rows: 5, circular: true, pattern: ["purl"] },
+  // Left on the needles. Without one of these, casting on and binding off
+  // appear in every equation in the same proportion and cannot be separated.
+  { stitches: 25, rows: 12, circular: false, pattern: ["knit"], finished: false },
 ];
 
 const clean = solveCalibration(shapes.map(function (s) { return fabricate(s, 0); }), unknowns);
@@ -160,26 +165,49 @@ check("but the error bars still allow for the tape",
   clean.sigma + " / " + clean.uncertainty.knit);
 
 const exactCount = solveCalibration(
-  shapes.slice(0, 5).map(function (s) { return fabricate(s, 0); }), unknowns
+  [shapes[0], shapes[1], shapes[2], shapes[3], shapes[4], shapes[6]]
+    .map(function (s) { return fabricate(s, 0); }), unknowns
 );
 check("with nothing spare there is no disagreement to report",
   exactCount.ok && exactCount.scatter === null && exactCount.measuredNoise === false);
 
+group("casting on against binding off");
+
+// The whole reason for the swatch left on the needles.
+check("a live swatch is charged for casting on but not binding off",
+  swatchRow(shapes[6], ["castOn", "bindOff"]).join(",") === "25,0",
+  swatchRow(shapes[6], ["castOn", "bindOff"]).join(","));
+check("a finished one is charged for both",
+  swatchRow(shapes[0], ["castOn", "bindOff"]).join(",") === "10,10");
+check("leaving it on the needle makes it a different swatch",
+  groupSwatches([
+    { stitches: 10, rows: 10, circular: false, pattern: ["knit"] },
+    { stitches: 10, rows: 10, circular: false, pattern: ["knit"], finished: false },
+  ]).length === 2);
+
+// Every finished swatch contains as many cast-on stitches as bind-off ones, so
+// the two columns are identical and no amount of them can tell them apart.
+const allFinished = shapes.slice(0, 6).map(function (s) { return fabricate(s, 0); });
+check("finished swatches alone cannot separate the two ends",
+  !solveCalibration(allFinished, unknowns).ok);
+check("adding a live one separates them",
+  solveCalibration(allFinished.concat([fabricate(shapes[6], 0)]), unknowns).ok);
+
 group("designs that cannot work are refused");
 
-check("two swatches cannot fix five unknowns",
+check("two swatches cannot fix six unknowns",
   !solveCalibration([shapes[0], shapes[1]].map(function (s) { return fabricate(s, 0); }), unknowns).ok);
 
-// Same shape, scaled: 200 knit / 10 setup against 400 knit / 20 setup. Both
+// Same shape, scaled: 200 knit / 10 cast on against 400 knit / 20 cast on. Both
 // equations say the same thing twice as loudly, so neither can be pinned.
-// 10x20 against 20x40 would NOT do this — that is knit x4 against setup x2,
+// 10x20 against 20x40 would NOT do this — that is knit x4 against cast on x2,
 // which separates them perfectly well.
 const proportional = [
   { stitches: 10, rows: 20, circular: false, pattern: ["knit"] },
   { stitches: 20, rows: 20, circular: false, pattern: ["knit"] },
 ];
-check("proportional swatches do not separate knit from setup",
-  !solveCalibration(proportional.map(function (s) { return fabricate(s, 0); }), ["knit", "setup"]).ok);
+check("proportional swatches do not separate knit from cast on",
+  !solveCalibration(proportional.map(function (s) { return fabricate(s, 0); }), ["knit", "castOn"]).ok);
 check("no swatches at all is refused rather than crashed on",
   solveCalibration([], unknowns).ok === false);
 
@@ -255,19 +283,26 @@ check("no data gives null rather than a divide by zero", metresPerGram([]) === n
 
 group("prescribing: in the round, knit only");
 
+// 8000 rather than 3000: separating the two ends costs precision, because the
+// only thing distinguishing them is which swatches were bound off. At 3000 it
+// is solvable but a shade short of a 1% bind-off, which is honest and makes a
+// poor test of "meets its targets".
 const roundOnly = prescribeSwatches({
   types: [{ name: "knit", current: 0.05 }],
   construction: "round",
-  budget: 3000,
+  budget: 8000,
 });
 
 check("no turn unknown in a round-only calibration",
-  roundOnly.unknowns.join(",") === "knit,setup", roundOnly.unknowns.join(","));
+  roundOnly.unknowns.join(",") === "knit,castOn,bindOff", roundOnly.unknowns.join(","));
 check("every prescribed swatch is circular",
   roundOnly.swatches.every(function (s) { return s.circular; }));
 check("respects the 16-stitch floor for a workable tube",
   roundOnly.swatches.every(function (s) { return s.stitches >= MIN_ROUND_STITCHES; }));
-check("stays inside the stitch budget", roundOnly.cost <= 3000, String(roundOnly.cost));
+check("some are left on the needle, or the two ends could not be told apart",
+  roundOnly.swatches.some(function (s) { return s.finished === false; }) &&
+  roundOnly.swatches.some(function (s) { return s.finished !== false; }));
+check("stays inside the stitch budget", roundOnly.cost <= 8000, String(roundOnly.cost));
 check("is solvable", roundOnly.solvable);
 check("meets its targets", roundOnly.meetsTargets);
 report(roundOnly);
@@ -284,7 +319,7 @@ const full = prescribeSwatches({
   budget: 4000,
 });
 
-check("all five unknowns", full.unknowns.join(",") === "knit,purl,slipped,turn,setup",
+check("all six unknowns", full.unknowns.join(",") === "knit,purl,slipped,turn,castOn,bindOff",
   full.unknowns.join(","));
 check("at least one swatch per unknown",
   full.swatches.length >= full.unknowns.length, String(full.swatches.length));
@@ -322,7 +357,7 @@ check("prescribes nothing rather than crashing", broke.swatches.length === 0,
   String(broke.swatches.length));
 check("says it is not solvable", broke.solvable === false);
 check("says it does not meet the targets", broke.meetsTargets === false);
-check("still names every unknown", broke.unknowns.length === 3);
+check("still names every unknown", broke.unknowns.length === 4, broke.unknowns.join(","));
 check("every figure is reported as unknown",
   broke.unknowns.every(function (n) { return broke.expected[n] === Infinity; }));
 

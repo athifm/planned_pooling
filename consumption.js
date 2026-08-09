@@ -31,7 +31,11 @@ const CAST_ON_METHODS = [
   { id: "tubular", name: "Tubular", perStitch: 4 },
   // Picked automatically when the figure is edited by hand, so a typed number
   // is never silently attributed to a method that does not produce it.
-  { id: "other", name: "Measured myself", perStitch: null },
+  //
+  // Deliberately not called "measured": measuring is what the calibration
+  // panel does, and having two different things called that in one panel was
+  // exactly as confusing as it sounds.
+  { id: "other", name: "Other", perStitch: null },
 ];
 
 function castOnMethod(id) {

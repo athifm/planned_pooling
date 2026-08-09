@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 18;
+const SETTINGS_VERSION = 19;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -75,10 +75,11 @@ const DEFAULT_SETTINGS = {
   // one, so there is no switch, only how much it costs.
   castOnMethod: "longTail",
   castOnPerStitch: 2.5,
-  // Casting on and binding off as one figure, because no swatch can tell them
-  // apart. Shares the cast-on unit, being the same kind of measurement in the
+  // What calibration measured, as opposed to what the method above guesses.
+  // Both share the cast-on unit, being the same kind of measurement in the
   // same panel.
-  setupPerStitch: 3,
+  castOnMeasured: 2.5,
+  bindOffMeasured: 1.5,
   castOnUnit: "cm",
 
   // Which stitches to work out real figures for. "carried" means the stitch
@@ -178,7 +179,8 @@ function readSettings() {
     turnUnit: fieldValue("turnUnit"),
     castOnMethod: fieldValue("castOnMethod"),
     castOnPerStitch: fieldNumber("castOnPerStitch"),
-    setupPerStitch: fieldNumber("setupPerStitch"),
+    castOnMeasured: fieldNumber("castOnMeasured"),
+    bindOffMeasured: fieldNumber("bindOffMeasured"),
     castOnUnit: fieldValue("castOnUnit"),
     calTypes: readCalTypes(),
     calConstruction: document.querySelector("input[name=calConstruction]:checked").value,
@@ -260,7 +262,8 @@ function applySettings(s) {
   document.getElementById("turnUnit").value = s.turnUnit;
   document.getElementById("castOnMethod").value = s.castOnMethod;
   document.getElementById("castOnPerStitch").value = s.castOnPerStitch;
-  document.getElementById("setupPerStitch").value = s.setupPerStitch;
+  document.getElementById("castOnMeasured").value = s.castOnMeasured;
+  document.getElementById("bindOffMeasured").value = s.bindOffMeasured;
   document.getElementById("castOnUnit").value = s.castOnUnit;
   setTemplateRows(s.template);
 }

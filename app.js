@@ -25,23 +25,29 @@ const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
 const castOnMethodInput = document.getElementById("castOnMethod");
 const castOnInput = document.getElementById("castOnPerStitch");
-const setupInput = document.getElementById("setupPerStitch");
+const castOnMeasuredInput = document.getElementById("castOnMeasured");
+const bindOffMeasuredInput = document.getElementById("bindOffMeasured");
 const castOnUnitInput = document.getElementById("castOnUnit");
 const turnInput = document.getElementById("turnPerRow");
 const turnUnitInput = document.getElementById("turnUnit");
 
-// The two figures the solver finds that are not stitches, named as
+// The three figures the solver finds that are not stitches, named as
 // calibration.js names them. Each lives with the thing it is an allowance for,
 // so the app has to know where to put an answer.
 const TURN_FIGURE = "turn";
-const SETUP_FIGURE = "setup";
+const CAST_ON_FIGURE = "castOn";
+const BIND_OFF_FIGURE = "bindOff";
 
 function turnMetres() {
   return toMetres(num(turnInput), turnUnitInput.value);
 }
 
-function setupMetres() {
-  return toMetres(num(setupInput), castOnUnitInput.value);
+function measuredCastOnMetres() {
+  return toMetres(num(castOnMeasuredInput), castOnUnitInput.value);
+}
+
+function measuredBindOffMetres() {
+  return toMetres(num(bindOffMeasuredInput), castOnUnitInput.value);
 }
 const stitchesLabel   = document.getElementById("stitchesLabel");
 
@@ -162,17 +168,18 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
   const note = document.getElementById("castOnNote");
   const unit = castOnUnitInput.value;
 
-  // The measured figure shares the unit dropdown a row above it, which is far
-  // enough away to leave a bare number sitting there in no unit at all.
-  document.getElementById("setupUnitTag").textContent = unit;
+  // The measured boxes share the unit dropdown a row above them, which is far
+  // enough away to leave bare numbers sitting there in no unit at all.
+  document.getElementById("castOnMeasuredTag").textContent = unit;
+  document.getElementById("bindOffMeasuredTag").textContent = unit;
 
-  if (!(allowancePerStitch > 0) || !(stitches > 0)) {
+  if (!(castOnPerStitch > 0) || !(stitches > 0)) {
     note.textContent = "";
     return;
   }
 
   const start = castOnPerStitch * stitches;
-  const total = allowancePerStitch * stitches;
+  const bindOff = (allowancePerStitch - castOnPerStitch) * stitches;
 
   // Per stitch in the box's own unit, totals in metres — the same split the
   // turning note uses, because a few centimetres per stitch and a few metres
@@ -182,24 +189,10 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
     start.toFixed(2) + " m in all — so the fabric begins that far into the " +
     "ball, and the colors shift with it.";
 
-  if (!sectionOpen("castOn")) {
-    text += " Binding off costs yarn as well; calibrate in advanced mode to " +
-      "count it.";
-    note.textContent = text;
-    return;
-  }
-
-  // The measured figure covers casting on and binding off together, which no
-  // swatch can separate. Whatever it has left over after the cast-on is the
-  // bind-off — unless the method claims more than the whole measurement, and
-  // then something is wrong and saying which is more use than a number.
-  const bindOff = total - start;
-  text += bindOff > 0
-    ? " Binding off accounts for the remaining " + bindOff.toFixed(2) +
-      " m of the measured setup figure."
-    : " The measured setup figure is smaller than this method is supposed to " +
-      "cost on its own, so all of it is being counted as cast-on. Either the " +
-      "method is wrong or the swatches were.";
+  text += sectionOpen("castOn")
+    ? " Binding off adds " + bindOff.toFixed(2) + " m at the far end, which " +
+      "changes the total but moves nothing."
+    : " Binding off costs yarn as well; calibrate to count it.";
 
   note.textContent = text;
 }
@@ -220,25 +213,22 @@ function turningActive() {
 // Yarn per stitch spent casting on, in metres.
 //
 // This is the figure that moves the pattern, so it has to be the cast-on
-// alone. Closed, it is whatever the chosen method costs. Open, there is a
-// measured number — but the solver's "setup" covers binding off as well,
-// because no swatch can tell the two apart, so it is a ceiling on the cast-on
-// rather than the cast-on itself. Whichever is smaller is the one that can be
-// defended.
+// alone. A measured one replaces the method's guess outright — the method was
+// only ever a stand-in for a number nobody had yet.
 function castOnMetres() {
-  const chosen = toMetres(num(castOnInput), castOnUnitInput.value);
-  if (!sectionOpen("castOn")) return chosen;
-  return Math.min(chosen, setupMetres());
+  return sectionOpen("castOn")
+    ? measuredCastOnMetres()
+    : toMetres(num(castOnInput), castOnUnitInput.value);
 }
 
 // Yarn per stitch spent at both ends together, for the total.
 //
-// Closed, this knows only what it was told about casting on. Open, there is
-// the measured figure, which covers binding off too — the one place the
-// inseparable pair is exactly what is wanted.
+// Without measurements this knows only about casting on: a method says nothing
+// about how you bind off, and inventing a second number would be worse than
+// leaving it out and saying so.
 function endAllowanceMetres() {
   return sectionOpen("castOn")
-    ? setupMetres()
+    ? measuredCastOnMetres() + measuredBindOffMetres()
     : toMetres(num(castOnInput), castOnUnitInput.value);
 }
 
@@ -968,7 +958,9 @@ let previousCastOnUnit = castOnUnitInput.value;
 
 castOnUnitInput.addEventListener("change", function () {
   const unit = castOnUnitInput.value;
-  convertBoxes([castOnInput, setupInput], previousCastOnUnit, unit);
+  convertBoxes(
+    [castOnInput, castOnMeasuredInput, bindOffMeasuredInput], previousCastOnUnit, unit
+  );
   previousCastOnUnit = unit;
 });
 
@@ -1028,7 +1020,9 @@ const calBudgetInput = document.getElementById("calBudget");
 // Unknowns the solver has to find that nobody chose from the stitch table, so
 // they need explaining wherever they turn up.
 const CALIBRATION_NOTES = {
-  setup: "casting on and binding off together — no swatch can tell the two apart",
+  castOn: "the yarn that goes on the needles before the first stitch",
+  bindOff: "finishing the last row off, which no swatch can measure unless " +
+    "another one is left unfinished",
   turn: "turning the work at the end of a flat row",
 };
 
@@ -1053,7 +1047,8 @@ function calibrationRequest() {
     // These two are not in the stitch table, so they are read from where they
     // now live rather than from the map above.
     turnCurrent: turnMetres(),
-    setupCurrent: setupMetres(),
+    castOnCurrent: measuredCastOnMetres(),
+    bindOffCurrent: measuredBindOffMetres(),
   };
 }
 
@@ -1108,6 +1103,12 @@ function showPrescription() {
   }
 
   prescriptionBox.appendChild(swatchListOf(plan.swatches));
+
+  if (plan.swatches.some(function (s) { return s.finished === false; })) {
+    calNote("Some of these are left on the needle. That is not an oversight: " +
+      "an unfinished swatch has a cast-on and no bind-off, and that is the " +
+      "only thing in the whole set that tells those two apart.");
+  }
 
   calNote(plan.cost + " stitches in all. Leave a tail at each end you can hold " +
           "on to, and keep your usual tension — a swatch knitted more carefully " +
@@ -1536,8 +1537,11 @@ function destinationFor(name) {
   if (name === TURN_FIGURE) {
     return { input: turnInput, unit: turnUnitInput.value };
   }
-  if (name === SETUP_FIGURE) {
-    return { input: setupInput, unit: castOnUnitInput.value };
+  if (name === CAST_ON_FIGURE) {
+    return { input: castOnMeasuredInput, unit: castOnUnitInput.value };
+  }
+  if (name === BIND_OFF_FIGURE) {
+    return { input: bindOffMeasuredInput, unit: castOnUnitInput.value };
   }
 
   const unit = document.getElementById("typeUnit").value;

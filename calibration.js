@@ -21,10 +21,17 @@
 // Every measurement is a solve; the only question is how well conditioned it
 // is.
 //
-// "setup" is one figure covering cast-on and bind-off together, because they
-// cannot be told apart. Every swatch equation contains S x castOn + S x
-// bindOff, which is S x (castOn + bindOff) whatever the swatch — so a solver
-// asked for two numbers would return one number and noise.
+// Casting on and binding off are separate unknowns, but only just. Every
+// finished swatch contains S x castOn + S x bindOff, which is S x their sum
+// whatever its shape — so a set of finished swatches can only ever report the
+// total, and asking it for two numbers would get one number and noise.
+//
+// One swatch left on the needles breaks the tie. It has a cast-on and no
+// bind-off, so its equation is the one place the two appear in different
+// proportions. Knit it, do not bind it off, then unravel and measure as usual.
+//
+// This matters beyond tidiness: only the cast-on moves the colour pattern,
+// because only it comes off the ball before the first stitch.
 
 // Yarn reserved at each end of a swatch for holding on to. Subtracted from the
 // measured length before it reaches the solver, exactly as the join adviser
@@ -58,6 +65,12 @@ function rowCounts(pattern, stitches) {
   return counts;
 }
 
+// Was it bound off? Anything that does not say is, because that is what a
+// finished swatch normally is.
+function isFinished(swatch) {
+  return swatch.finished !== false;
+}
+
 // The swatch's row of the matrix: how much of each unknown it contains.
 function swatchRow(swatch, unknowns) {
   const per = rowCounts(swatch.pattern, swatch.stitches);
@@ -66,7 +79,10 @@ function swatchRow(swatch, unknowns) {
     // reason for offering round swatches, since it removes a column from the
     // problem rather than merely measuring it.
     if (name === "turn") return swatch.circular ? 0 : Math.max(0, swatch.rows - 1);
-    if (name === "setup") return swatch.stitches;
+    // Every swatch is cast on. Only a finished one is bound off, and that
+    // difference is the only thing that tells the two apart.
+    if (name === "castOn") return swatch.stitches;
+    if (name === "bindOff") return isFinished(swatch) ? swatch.stitches : 0;
     return (per.get(name) || 0) * swatch.rows;
   });
 }
@@ -83,7 +99,8 @@ function swatchCost(swatch) {
 // mistake, so they are counted instead.
 function swatchKey(swatch) {
   return swatch.stitches + "x" + swatch.rows +
-    (swatch.circular ? "round" : "flat") + ":" + swatch.pattern.join("/");
+    (swatch.circular ? "round" : "flat") +
+    (isFinished(swatch) ? "" : "+live") + ":" + swatch.pattern.join("/");
 }
 
 function groupSwatches(swatches) {
@@ -126,7 +143,10 @@ function describeSwatch(swatch) {
       : swatch.pattern.join(", ") + " repeated";
   return (
     "Cast on " + swatch.stitches + ", work " + swatch.rows + " " + rows +
-    " " + worked + " — " + pattern
+    " " + worked + " — " + pattern +
+    // Said only when it is unusual. Binding off is what anyone would do
+    // without being told; leaving it live is the instruction that matters.
+    (isFinished(swatch) ? "" : ", and leave it on the needle")
   );
 }
 
@@ -403,7 +423,18 @@ function candidateSwatches(request) {
       for (const circular of constructions) {
         if (circular && stitches < MIN_ROUND_STITCHES) continue;
         for (const pattern of patterns) {
-          out.push({ stitches: stitches, rows: rows, circular: circular, pattern: pattern });
+          // Both ways, because whether a swatch was bound off is a column in
+          // the problem like any other — and the search will not find a
+          // separable set without at least one that was not.
+          for (const finished of [true, false]) {
+            out.push({
+              stitches: stitches,
+              rows: rows,
+              circular: circular,
+              pattern: pattern,
+              finished: finished,
+            });
+          }
         }
       }
     }
@@ -416,7 +447,8 @@ function unknownsFor(request) {
   // Nothing turns in the round, so a round-only calibration has no turn to
   // find and should not be asked to look for one.
   if (request.construction !== "round") names.push("turn");
-  names.push("setup");
+  names.push("castOn");
+  names.push("bindOff");
   return names;
 }
 
@@ -425,7 +457,8 @@ function targetsFor(request, unknowns) {
   const current = {};
   for (const t of request.types) current[t.name] = t.current;
   current.turn = request.turnCurrent || 0.01;
-  current.setup = request.setupCurrent || 0.02;
+  current.castOn = request.castOnCurrent || 0.025;
+  current.bindOff = request.bindOffCurrent || 0.015;
 
   return unknowns.map(function (name) {
     const value = current[name] > 0 ? current[name] : 0.05;
@@ -452,7 +485,15 @@ function prescribeSwatches(request) {
   const targets = targetsFor(request, unknowns);
   const sigma = request.sigma || DEFAULT_SIGMA;
   const budget = request.budget || Infinity;
-  const maxSwatches = request.maxSwatches || unknowns.length + 3;
+  // A cap on separate swatches, since each one is its own cast-on and its own
+  // measurement however few stitches it holds. The stitch budget is the real
+  // constraint — this only stops the list becoming absurd when the targets are
+  // out of reach.
+  //
+  // It used to be unknowns + 3, which quietly became the binding constraint
+  // once casting on and binding off were separated: the search would stop
+  // short while the panel advised raising a budget that was not the problem.
+  const maxSwatches = request.maxSwatches || Math.max(12, unknowns.length + 2);
   const candidates = candidateSwatches(request);
 
   // Small enough not to move the answer once the design is determined, large
