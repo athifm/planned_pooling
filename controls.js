@@ -396,23 +396,6 @@ document.getElementById("addType").addEventListener("click", function () {
   refreshCalTypes();
 });
 
-// --- Cast on ----------------------------------------------------------------
-
-// Built from the table in layer 2 rather than written out in the HTML, so
-// adding a method is a one-line change in the file that knows what one costs.
-function fillCastOnMethods() {
-  const select = document.getElementById("castOnMethod");
-  select.textContent = "";
-  for (const method of CAST_ON_METHODS) {
-    const option = document.createElement("option");
-    option.value = method.id;
-    option.textContent = method.name;
-    select.appendChild(option);
-  }
-}
-
-fillCastOnMethods();
-
 // --- Which stitches to calibrate --------------------------------------------
 // A mirror of the stitch type table, so it has to be rebuilt whenever a type is
 // added, removed or renamed — the same job as refreshTypeChoices, and for the

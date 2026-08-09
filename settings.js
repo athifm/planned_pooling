@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 19;
+const SETTINGS_VERSION = 20;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -52,8 +52,9 @@ const DEFAULT_SETTINGS = {
   swatchUnit: "cm",
   construction: "flat",
 
-  // Advanced. Rough placeholders — the calibration solver is what will
-  // eventually produce trustworthy numbers from measured swatches.
+  // Rough placeholders throughout — the calibration solver is what turns them
+  // into measurements.
+  //
   // Stitches only. Turning and casting on are yarn the fabric really spends,
   // but neither makes a stitch, so each one lives with the thing it is an
   // allowance for rather than as a row here.
@@ -71,13 +72,9 @@ const DEFAULT_SETTINGS = {
   // Charged per row, in the Construction panel with the choice it belongs to.
   turnPerRow: 1,
   turnUnit: "cm",
-  // Casting on is not optional the way counting turns is — every fabric has
-  // one, so there is no switch, only how much it costs.
-  castOnMethod: "longTail",
-  castOnPerStitch: 2.5,
-  // What calibration measured, as opposed to what the method above guesses.
-  // Both share the cast-on unit, being the same kind of measurement in the
-  // same panel.
+  // Not optional the way counting turns is — every fabric is cast on and bound
+  // off, so there is no switch here, only how much each costs. They share a
+  // unit, being the same kind of measurement side by side.
   castOnMeasured: 2.5,
   bindOffMeasured: 1.5,
   castOnUnit: "cm",
@@ -177,8 +174,6 @@ function readSettings() {
       .map(function (box) { return box.dataset.section; }),
     turnPerRow: fieldNumber("turnPerRow"),
     turnUnit: fieldValue("turnUnit"),
-    castOnMethod: fieldValue("castOnMethod"),
-    castOnPerStitch: fieldNumber("castOnPerStitch"),
     castOnMeasured: fieldNumber("castOnMeasured"),
     bindOffMeasured: fieldNumber("bindOffMeasured"),
     castOnUnit: fieldValue("castOnUnit"),
@@ -260,8 +255,6 @@ function applySettings(s) {
 
   document.getElementById("turnPerRow").value = s.turnPerRow;
   document.getElementById("turnUnit").value = s.turnUnit;
-  document.getElementById("castOnMethod").value = s.castOnMethod;
-  document.getElementById("castOnPerStitch").value = s.castOnPerStitch;
   document.getElementById("castOnMeasured").value = s.castOnMeasured;
   document.getElementById("bindOffMeasured").value = s.bindOffMeasured;
   document.getElementById("castOnUnit").value = s.castOnUnit;

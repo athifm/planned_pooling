@@ -23,8 +23,6 @@ const staleBadge      = document.getElementById("staleBadge");
 const canvasWrap      = document.getElementById("canvasWrap");
 const canvasArea      = document.querySelector(".canvasArea");
 const constructionSet = document.getElementById("construction");
-const castOnMethodInput = document.getElementById("castOnMethod");
-const castOnInput = document.getElementById("castOnPerStitch");
 const castOnMeasuredInput = document.getElementById("castOnMeasured");
 const bindOffMeasuredInput = document.getElementById("bindOffMeasured");
 const castOnUnitInput = document.getElementById("castOnUnit");
@@ -73,7 +71,6 @@ const SECTION_NAMES = {
   stitchTypes: "Stitches",
   template: "Row template",
   turning: "Turning",
-  castOn: "Cast on",
   calibration: "Calibration",
 };
 
@@ -82,7 +79,6 @@ const SECTIONS = [
   "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
   "template",     // rows built from a template
   "turning",      // yarn spent turning at each row end
-  "castOn",       // the measured setup figure, in place of the method's
   "calibration",  // measuring your own figures from swatches
 ];
 
@@ -168,9 +164,8 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
   const note = document.getElementById("castOnNote");
   const unit = castOnUnitInput.value;
 
-  // The measured boxes share the unit dropdown a row above them, which is far
-  // enough away to leave bare numbers sitting there in no unit at all.
-  document.getElementById("castOnMeasuredTag").textContent = unit;
+  // The bind-off box borrows the dropdown on the row above it, so it needs
+  // telling what unit it is in rather than sitting there as a bare number.
   document.getElementById("bindOffMeasuredTag").textContent = unit;
 
   if (!(castOnPerStitch > 0) || !(stitches > 0)) {
@@ -189,10 +184,10 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
     start.toFixed(2) + " m in all — so the fabric begins that far into the " +
     "ball, and the colors shift with it.";
 
-  text += sectionOpen("castOn")
-    ? " Binding off adds " + bindOff.toFixed(2) + " m at the far end, which " +
-      "changes the total but moves nothing."
-    : " Binding off costs yarn as well; calibrate to count it.";
+  if (bindOff > 0) {
+    text += " Binding off adds " + bindOff.toFixed(2) + " m at the far end, " +
+      "which changes the total but moves nothing.";
+  }
 
   note.textContent = text;
 }
@@ -212,24 +207,17 @@ function turningActive() {
 
 // Yarn per stitch spent casting on, in metres.
 //
-// This is the figure that moves the pattern, so it has to be the cast-on
-// alone. A measured one replaces the method's guess outright — the method was
-// only ever a stand-in for a number nobody had yet.
+// Only the cast-on moves the pattern, because only it comes off the ball
+// before the first stitch. Both ends together are what the fabric costs.
+//
+// Neither hides behind a section: every fabric is cast on and bound off, so
+// there is nothing here to switch on or off — only figures to improve.
 function castOnMetres() {
-  return sectionOpen("castOn")
-    ? measuredCastOnMetres()
-    : toMetres(num(castOnInput), castOnUnitInput.value);
+  return measuredCastOnMetres();
 }
 
-// Yarn per stitch spent at both ends together, for the total.
-//
-// Without measurements this knows only about casting on: a method says nothing
-// about how you bind off, and inventing a second number would be worse than
-// leaving it out and saying so.
 function endAllowanceMetres() {
-  return sectionOpen("castOn")
-    ? measuredCastOnMetres() + measuredBindOffMetres()
-    : toMetres(num(castOnInput), castOnUnitInput.value);
+  return measuredCastOnMetres() + measuredBindOffMetres();
 }
 
 // The settings actually in force, as opposed to the ones sitting in the form.
@@ -934,33 +922,11 @@ document.getElementById("clearJoin").addEventListener("click", function () {
   regenerate();
 });
 
-// Picking a method fills in what it costs. The figures are rough, so the box
-// stays editable — and editing it moves the method to "measured myself", so a
-// typed number is never left sitting under a label that did not produce it.
-castOnMethodInput.addEventListener("change", function () {
-  const method = castOnMethod(castOnMethodInput.value);
-  if (method.perStitch !== null) {
-    castOnInput.value = Number(
-      fromMetres(toMetres(method.perStitch, "cm"), castOnUnitInput.value).toFixed(3)
-    );
-  }
-});
-
-castOnInput.addEventListener("change", function () {
-  const method = castOnMethod(castOnMethodInput.value);
-  const typed = toMetres(num(castOnInput), castOnUnitInput.value);
-  if (method.perStitch !== null && Math.abs(typed - toMetres(method.perStitch, "cm")) > 1e-9) {
-    castOnMethodInput.value = "other";
-  }
-});
-
 let previousCastOnUnit = castOnUnitInput.value;
 
 castOnUnitInput.addEventListener("change", function () {
   const unit = castOnUnitInput.value;
-  convertBoxes(
-    [castOnInput, castOnMeasuredInput, bindOffMeasuredInput], previousCastOnUnit, unit
-  );
+  convertBoxes([castOnMeasuredInput, bindOffMeasuredInput], previousCastOnUnit, unit);
   previousCastOnUnit = unit;
 });
 

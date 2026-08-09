@@ -44,14 +44,6 @@
   </div>
 
   <div class="panel">
-<details class="panelSection" data-section="display">
-      <summary>Display</summary>
-      <div class="fields">
-        <label for="zoom">Zoom (pixels per mm)</label>
-        <input type="number" id="zoom" value="1.2" step="0.1" min="0.1" max="20">
-      </div>
-    </details>
-
     <fieldset>
       <legend>Yarn colors</legend>
 
@@ -130,88 +122,6 @@
       </details>
     </fieldset>
 
-    <fieldset id="construction">
-      <legend>Construction</legend>
-      <label class="choice">
-        <input type="radio" name="construction" value="flat" checked>
-        Flat — knitted back and forth, every other row reversed
-      </label>
-      <label class="choice">
-        <input type="radio" name="construction" value="circular">
-        Circular — knitted in the round, a continuous spiral
-      </label>
-
-      <details class="subSection" data-section="turning">
-        <summary>Count the yarn used turning at each row end</summary>
-
-        <div class="fields">
-          <label for="turnPerRow">Yarn used per turn</label>
-          <span class="withUnit">
-            <input type="number" id="turnPerRow" value="1" step="0.1" min="0">
-            <select id="turnUnit" aria-label="Yarn per turn unit">
-              <option value="m">metres</option>
-              <option value="cm" selected>centimetres</option>
-              <option value="ft">feet</option>
-              <option value="yd">yards</option>
-              <option value="in">inches</option>
-            </select>
-          </span>
-        </div>
-
-        <p class="hint" id="turningNote"></p>
-      </details>
-    </fieldset>
-
-    <fieldset id="castOn">
-      <legend>Cast on</legend>
-
-      <div class="fields">
-        <label for="castOnMethod">Method</label>
-        <select id="castOnMethod"></select>
-
-        <label for="castOnPerStitch">Yarn per stitch</label>
-        <span class="withUnit">
-          <input type="number" id="castOnPerStitch" value="2.5" step="0.1" min="0">
-          <select id="castOnUnit" aria-label="Cast on yarn per stitch unit">
-            <option value="m">metres</option>
-            <option value="cm" selected>centimetres</option>
-            <option value="ft">feet</option>
-            <option value="yd">yards</option>
-            <option value="in">inches</option>
-          </select>
-        </span>
-
-      </div>
-
-      <details class="subSection" data-section="castOn">
-        <summary>I have measured these</summary>
-
-        <div class="fields">
-          <label for="castOnMeasured">Casting on, per stitch</label>
-          <span class="withUnit">
-            <input type="number" id="castOnMeasured" value="2.5" step="0.1" min="0">
-            <span class="unitTag" id="castOnMeasuredTag"></span>
-          </span>
-
-          <label for="bindOffMeasured">Binding off, per stitch</label>
-          <span class="withUnit">
-            <input type="number" id="bindOffMeasured" value="1.5" step="0.1" min="0">
-            <span class="unitTag" id="bindOffMeasuredTag"></span>
-          </span>
-        </div>
-
-        <p class="hint">
-          Calibration writes both of these. It can tell them apart because one
-          of the swatches it asks for is left on the needle — that one has a
-          cast-on and no bind-off, which is the only place in the whole set
-          where the two appear in different proportions. Once these are here
-          the method above is only a starting guess, and stops being used.
-        </p>
-      </details>
-
-      <p class="hint" id="castOnNote"></p>
-    </fieldset>
-
     <fieldset>
       <legend>Gauge</legend>
       <div class="fields">
@@ -254,6 +164,38 @@
 
         <button type="button" id="applySwatch">Use this gauge</button>
         <p class="hint" id="swatchResult"></p>
+      </details>
+    </fieldset>
+
+    <fieldset id="construction">
+      <legend>Construction</legend>
+      <label class="choice">
+        <input type="radio" name="construction" value="flat" checked>
+        Flat — knitted back and forth, every other row reversed
+      </label>
+      <label class="choice">
+        <input type="radio" name="construction" value="circular">
+        Circular — knitted in the round, a continuous spiral
+      </label>
+
+      <details class="subSection" data-section="turning">
+        <summary>Count the yarn used turning at each row end</summary>
+
+        <div class="fields">
+          <label for="turnPerRow">Yarn used per turn</label>
+          <span class="withUnit">
+            <input type="number" id="turnPerRow" value="1" step="0.1" min="0">
+            <select id="turnUnit" aria-label="Yarn per turn unit">
+              <option value="m">metres</option>
+              <option value="cm" selected>centimetres</option>
+              <option value="ft">feet</option>
+              <option value="yd">yards</option>
+              <option value="in">inches</option>
+            </select>
+          </span>
+        </div>
+
+        <p class="hint" id="turningNote"></p>
       </details>
     </fieldset>
 
@@ -341,6 +283,38 @@
           <p class="hint" id="templateResult"></p>
         </details>
       </details>
+    </fieldset>
+
+    <fieldset id="castOn">
+      <legend>Cast on</legend>
+
+      <div class="fields">
+        <label for="castOnMeasured">Casting on, per stitch</label>
+        <span class="withUnit">
+          <input type="number" id="castOnMeasured" value="2.5" step="0.1" min="0">
+          <select id="castOnUnit" aria-label="Cast on and bind off unit">
+            <option value="m">metres</option>
+            <option value="cm" selected>centimetres</option>
+            <option value="ft">feet</option>
+            <option value="yd">yards</option>
+            <option value="in">inches</option>
+          </select>
+        </span>
+
+        <label for="bindOffMeasured">Binding off, per stitch</label>
+        <span class="withUnit">
+          <input type="number" id="bindOffMeasured" value="1.5" step="0.1" min="0">
+          <span class="unitTag" id="bindOffMeasuredTag"></span>
+        </span>
+      </div>
+
+      <p class="hint">
+        Rough starting points, like the stitch figures. Calibration replaces
+        both — it can tell them apart because one of the swatches it asks for
+        is left on the needle, and that one has a cast-on and no bind-off.
+      </p>
+
+      <p class="hint" id="castOnNote"></p>
     </fieldset>
 
     <details class="panelSection" id="calibration" data-section="calibration">
@@ -452,6 +426,14 @@
       <button type="button" id="applyCalibration">Use these figures</button>
       <p class="hint" id="applyResult"></p>
     </fieldset>
+
+<details class="panelSection" data-section="display">
+      <summary>Display</summary>
+      <div class="fields">
+        <label for="zoom">Zoom (pixels per mm)</label>
+        <input type="number" id="zoom" value="1.2" step="0.1" min="0.1" max="20">
+      </div>
+    </details>
 
   </div>
 
