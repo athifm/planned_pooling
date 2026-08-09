@@ -124,9 +124,12 @@ check("invertMatrix returns null when singular", invertMatrix([[1, 2], [2, 4]]) 
 
 group("exact recovery from invented swatches");
 
-// The figures the solver is supposed to rediscover, in metres.
+// The figures the solver is supposed to rediscover, in metres. cabled is only
+// used by the four-stitch-type fixtures further down, but lives here so every
+// fixture draws its truth from one place rather than each inventing its own.
 const truth = {
-  knit: 0.05, purl: 0.055, slipped: 0.025, turn: 0.01, castOn: 0.02, bindOff: 0.012,
+  knit: 0.05, purl: 0.055, slipped: 0.025, cabled: 0.06,
+  turn: 0.01, castOn: 0.02, bindOff: 0.012,
 };
 const unknowns = ["knit", "purl", "slipped", "turn", "castOn", "bindOff"];
 
@@ -343,6 +346,80 @@ const solved = solveCalibration(
 check("knitting exactly what it prescribed recovers the truth",
   solved.ok && full.unknowns.every(function (n) { return close(solved.values[n], truth[n], 1e-9); }),
   solved.ok ? "" : solved.reason);
+
+group("prescribing: bare minimum");
+
+// The whole promise of minimal mode: stop the instant the equations solve,
+// with no spare swatch and nothing repeated. Round-only knit has exactly
+// three unknowns — knit, castOn, bindOff — so this is the smallest case
+// where a "no error" answer differs from the precision-seeking one at all.
+const minRound = prescribeSwatches({
+  types: [{ name: "knit", current: 0.05 }],
+  construction: "round",
+  budget: 8000,
+  minimal: true,
+});
+
+check("exactly one swatch per unknown, not the precision-seeking pile above",
+  minRound.swatches.length === minRound.unknowns.length,
+  minRound.swatches.length + " swatches for " + minRound.unknowns.length + " unknowns");
+check("still solvable", minRound.solvable);
+check("no swatch is repeated — a repeat would only ever buy precision, " +
+  "which minimal mode was not asked for",
+  groupSwatches(minRound.swatches).every(function (g) { return g.count === 1; }));
+
+// The four-stitch-type fixture that used to defeat the search entirely (see
+// "more unknowns than the search used to manage" below) is the sterner test:
+// seven unknowns, and every one of them still has to appear somewhere or the
+// set cannot be full rank.
+const minWide = prescribeSwatches({
+  types: [
+    { name: "knit", current: 0.05 },
+    { name: "purl", current: 0.055 },
+    { name: "cabled", current: 0.06 },
+    { name: "slipped", current: 0.025, dependent: true },
+  ],
+  construction: "both",
+  budget: 8000,
+  minimal: true,
+});
+
+check("seven unknowns, seven swatches — no more",
+  minWide.swatches.length === minWide.unknowns.length,
+  minWide.swatches.length + " swatches for " + minWide.unknowns.length + " unknowns");
+check("still solvable with nothing spare", minWide.solvable);
+
+// Recovers the truth exactly all the same — solvability, not precision, is
+// what "no measurement error" is standing in for. The refinement pass's rank
+// guard is what this is really checking: swapping in a better-conditioned
+// swatch must never cost the set its solvability when there is no redundancy
+// to absorb the loss.
+const minSolved = solveCalibration(
+  minWide.swatches.map(function (s) {
+    const row = swatchRow(s, minWide.unknowns);
+    let used = 0;
+    for (let i = 0; i < row.length; i++) used += row[i] * truth[minWide.unknowns[i]];
+    return { swatch: s, used: used };
+  }),
+  minWide.unknowns
+);
+check("the minimal set still recovers the truth exactly",
+  minSolved.ok && minWide.unknowns.every(function (n) {
+    return close(minSolved.values[n], truth[n], 1e-9);
+  }),
+  minSolved.ok ? "" : minSolved.reason);
+
+// A budget that cannot even afford the minimum should fail exactly as target
+// mode does — minimal mode is not exempt from the budget, only from the
+// precision chase.
+const minBroke = prescribeSwatches({
+  types: [{ name: "knit", current: 0.05 }],
+  construction: "flat",
+  budget: 60,
+  minimal: true,
+});
+check("too small a budget still refuses rather than crashing",
+  minBroke.swatches.length === 0 && minBroke.solvable === false);
 
 group("more unknowns than the search used to manage");
 

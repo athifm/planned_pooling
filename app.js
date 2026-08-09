@@ -1055,7 +1055,15 @@ function calibrationRequest() {
     turnCurrent: turnMetres(),
     castOnCurrent: measuredCastOnMetres(),
     bindOffCurrent: measuredBindOffMetres(),
+    minimal: calMinimal(),
   };
+}
+
+// Whether "the bare minimum" is chosen over "enough to reach a precision" —
+// the same shape of question as byWeight(), and toggled onto the body the
+// same way so the CSS can hide what stops applying.
+function calMinimal() {
+  return document.querySelector("input[name=calSwatchMode]:checked").value === "minimum";
 }
 
 function calNote(text) {
@@ -1080,6 +1088,7 @@ function calAmount(metres, unit) {
 
 function showPrescription() {
   prescriptionBox.textContent = "";
+  document.body.classList.toggle("calMinimal", calMinimal());
   const request = calibrationRequest();
 
   if (request.types.length === 0) {
@@ -1122,31 +1131,36 @@ function showPrescription() {
 
   // What this will actually buy, against what was asked for. Worth showing
   // before anything is knitted, because that is exactly when it can still be
-  // changed.
-  const unit = document.getElementById("typeUnit").value;
-  const table = document.createElement("div");
-  table.className = "precisionTable";
+  // changed. Minimal mode was never asked to buy anything — it stopped the
+  // instant the equations solved — so there is nothing honest to compare the
+  // spread against, and the table is skipped rather than shown against a
+  // target nobody chose.
+  if (!request.minimal) {
+    const unit = document.getElementById("typeUnit").value;
+    const table = document.createElement("div");
+    table.className = "precisionTable";
 
-  for (const name of plan.unknowns) {
-    const short = plan.expected[name] > plan.targets[name];
+    for (const name of plan.unknowns) {
+      const short = plan.expected[name] > plan.targets[name];
 
-    const label = document.createElement("span");
-    label.textContent = name;
-    const got = document.createElement("span");
-    got.textContent = "±" + calAmount(plan.expected[name], unit);
-    const want = document.createElement("span");
-    want.textContent = "wanted ±" + calAmount(plan.targets[name], unit);
+      const label = document.createElement("span");
+      label.textContent = name;
+      const got = document.createElement("span");
+      got.textContent = "±" + calAmount(plan.expected[name], unit);
+      const want = document.createElement("span");
+      want.textContent = "wanted ±" + calAmount(plan.targets[name], unit);
 
-    if (short) {
-      got.className = "short";
-      want.className = "short";
+      if (short) {
+        got.className = "short";
+        want.className = "short";
+      }
+
+      table.appendChild(label);
+      table.appendChild(got);
+      table.appendChild(want);
     }
-
-    table.appendChild(label);
-    table.appendChild(got);
-    table.appendChild(want);
+    prescriptionBox.appendChild(table);
   }
-  prescriptionBox.appendChild(table);
 
   for (const name of plan.unknowns) {
     if (CALIBRATION_NOTES[name]) {
@@ -1155,7 +1169,11 @@ function showPrescription() {
     }
   }
 
-  if (!plan.meetsTargets) {
+  if (request.minimal) {
+    calNote("This is the fewest swatches that can pin down every figure at " +
+            "all. Knit more of any shape to tighten the numbers — repeats of " +
+            "a shape average out measuring noise.");
+  } else if (!plan.meetsTargets) {
     calNote("Not everything reaches 1% of its current figure, and " +
             plan.limiting + " is what holds the set back. Raise the stitch " +
             "budget, measure more precisely, or accept a looser figure for it — " +
@@ -1848,6 +1866,7 @@ syncUnitBaselines();
 // to be set explicitly — the same hazard as the unit baselines above.
 document.body.classList.toggle("fades", useFadesInput.checked);
 document.body.classList.toggle("weighing", byWeight());
+document.body.classList.toggle("calMinimal", calMinimal());
 updateCalUnitTags();
 showConversion();
 updateMeasurementReadout();

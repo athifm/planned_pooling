@@ -531,6 +531,12 @@ function prescribeSwatches(request) {
   const targets = targetsFor(request, unknowns);
   const sigma = request.sigma || DEFAULT_SIGMA;
   const budget = request.budget || Infinity;
+  // Stop the moment the system is solvable, rather than continuing on to a
+  // target precision. There is then exactly one swatch per unknown and no
+  // spare to avenge a bad measurement — the trade a knitter makes when they
+  // want the fewest possible swatches and are willing to assume none of them
+  // came out wrong.
+  const minimal = !!request.minimal;
   // A cap on separate swatches, since each one is its own cast-on and its own
   // measurement however few stitches it holds. The stitch budget is the real
   // constraint — this only stops the list becoming absurd when the targets are
@@ -604,12 +610,21 @@ function prescribeSwatches(request) {
     // inversion a step.
     const solvableNow = rankOf(rows) === unknowns.length;
 
-    if (solvableNow && best.score > before * (1 - worthwhile)) break;
+    // In minimal mode there is no diminishing-return question to ask: the
+    // moment the set already solves, any further swatch is pure extra, so it
+    // stops without adding it. solvableNow is judged on rows before best is
+    // added, so this fires on the very first pass after full rank — the set
+    // that comes out has exactly one swatch per unknown.
+    if (solvableNow && (minimal || best.score > before * (1 - worthwhile))) break;
 
     chosen.push(best.swatch);
     rows.push(swatchRow(best.swatch, unknowns));
     cost += swatchCost(best.swatch);
 
+    // Unreachable while the design is rank-deficient — the ridge term keeps
+    // the score enormous until then — so this has nothing to do with minimal
+    // mode; it only ever fires on the push that completes a target-mode set
+    // early.
     if (best.score <= 1) break;
   }
 
@@ -628,7 +643,17 @@ function prescribeSwatches(request) {
         const trial = chosen.slice();
         trial[i] = c;
         const score = scoreWith(trial);
-        if (score < best.score * (1 - 1e-9)) best = { swatch: c, score: score };
+        // A minimal set has no spare swatch to absorb a bad swap: dropping
+        // rank by even one makes the whole set unsolvable, and the ridge term
+        // hides that behind a large-but-finite score rather than surfacing it
+        // as the infinity it really is. Target mode's extra swatches make this
+        // low-risk already, so the rank check is only worth its cost here.
+        //
+        // rankOf wants row vectors, not the swatch objects trial holds — the
+        // same conversion scoreWith already does internally for the score.
+        const safe = !minimal ||
+          rankOf(trial.map(function (s) { return swatchRow(s, unknowns); })) === unknowns.length;
+        if (safe && score < best.score * (1 - 1e-9)) best = { swatch: c, score: score };
       }
       if (best.swatch !== chosen[i]) {
         cost = without + swatchCost(best.swatch);

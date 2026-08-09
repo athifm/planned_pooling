@@ -456,6 +456,13 @@ body.circular .flatOnly {
   display: none;
 }
 
+/* Bare-minimum calibration was never asked to hit a precision, so the box
+   that states one — and the column reporting against it — have nothing to
+   show. */
+body.calMinimal .targetOnly {
+  display: none;
+}
+
 .typeRow,
 .typeHeader {
   display: grid;

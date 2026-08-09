@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 23;
+const SETTINGS_VERSION = 24;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -90,6 +90,9 @@ const DEFAULT_SETTINGS = {
     { name: "slipped", use: true, carried: true },
   ],
   calConstruction: "both",
+  // Whether the search stops at a target precision or the moment the system
+  // is solvable at all — see calibration.js's "minimal" flag.
+  calSwatchMode: "target",
   calBudget: 3000,
   calPrecision: 1,
   calUnit: "cm",
@@ -179,6 +182,7 @@ function readSettings() {
     castOnUnit: fieldValue("castOnUnit"),
     calTypes: readCalTypes(),
     calConstruction: document.querySelector("input[name=calConstruction]:checked").value,
+    calSwatchMode: document.querySelector("input[name=calSwatchMode]:checked").value,
     calBudget: fieldNumber("calBudget"),
     calPrecision: fieldNumber("calPrecision"),
     calUnit: fieldValue("calUnit"),
@@ -234,6 +238,9 @@ function applySettings(s) {
   refreshCalTypes(s.calTypes);
   document.querySelector(
     "input[name=calConstruction][value=" + s.calConstruction + "]"
+  ).checked = true;
+  document.querySelector(
+    "input[name=calSwatchMode][value=" + s.calSwatchMode + "]"
   ).checked = true;
   document.getElementById("calBudget").value = s.calBudget;
   document.getElementById("calPrecision").value = s.calPrecision;
