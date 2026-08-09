@@ -344,6 +344,38 @@ check("knitting exactly what it prescribed recovers the truth",
   solved.ok && full.unknowns.every(function (n) { return close(solved.values[n], truth[n], 1e-9); }),
   solved.ok ? "" : solved.reason);
 
+group("more unknowns than the search used to manage");
+
+check("rankOf counts independent rows, not rows",
+  rankOf([[1, 2], [2, 4], [0, 1]]) === 2, String(rankOf([[1, 2], [2, 4], [0, 1]])));
+check("rankOf on nothing is nothing", rankOf([]) === 0);
+
+// Four stitch types plus turn, casting on and binding off is seven unknowns.
+// The search used to stop at seven swatches with a rank-deficient set and half
+// the budget unspent: a second copy of a shape already chosen lowered the
+// ridge-propped variance a little, so it scored better than the differently
+// shaped swatch that would have separated the unknowns. It bought eight copies
+// of one small swatch and never prescribed a purl one at all.
+const wide = prescribeSwatches({
+  types: [
+    { name: "knit", current: 0.05 },
+    { name: "purl", current: 0.055 },
+    { name: "cabled", current: 0.06 },
+    { name: "slipped", current: 0.025, dependent: true },
+  ],
+  construction: "both",
+  budget: 3000,
+});
+
+check("seven unknowns still give a solvable set", wide.solvable,
+  wide.swatches.length + " swatches, " + wide.cost + " stitches");
+check("every stitch asked about appears in something",
+  ["knit", "purl", "cabled", "slipped"].every(function (name) {
+    return wide.swatches.some(function (s) { return s.pattern.includes(name); });
+  }),
+  wide.swatches.map(function (s) { return s.pattern.join("/"); }).join(" | "));
+check("and it stays inside the budget", wide.cost <= 3000, String(wide.cost));
+
 group("a budget too small for even one swatch");
 
 // Reachable, and it used to throw: with nothing chosen there is no matrix, and

@@ -366,11 +366,14 @@ function typeNamesByCode() {
 // The value that means "not a single stitch — read the pattern below". A name
 // no stitch can have, since a type's name is whatever was typed in the table
 // and this is not typeable.
-const TEMPLATE_CHOICE = " template";
+// "I want a stitch that is not in this list." Bracketed so it cannot collide
+// with a name someone types — and plain ASCII, after an invisible character
+// in the last version of this constant turned the whole file binary.
+const CUSTOM_CHOICE = "<custom>";
 
-// The "every row is" dropdown: every stitch type, then the pattern. One
-// control for one question — what goes in a row — with the simple answer and
-// the complicated one in the same list.
+// The "every row is" dropdown: the stitch types, then a way to make one more.
+// The table itself only appears with a pattern, so without this there would be
+// no way to add a stitch from the place where you pick one.
 //
 // Rebuilt whenever a type is added, removed or renamed, since those are its
 // options.
@@ -388,12 +391,12 @@ function refreshTypeChoices() {
     select.appendChild(option);
   }
 
-  const pattern = document.createElement("option");
-  pattern.value = TEMPLATE_CHOICE;
-  pattern.textContent = "worked from a pattern";
-  select.appendChild(pattern);
+  const custom = document.createElement("option");
+  custom.value = CUSTOM_CHOICE;
+  custom.textContent = "Custom…";
+  select.appendChild(custom);
 
-  if (wanted === TEMPLATE_CHOICE) {
+  if (wanted === CUSTOM_CHOICE) {
     select.value = wanted;
     return;
   }
@@ -409,15 +412,30 @@ function refreshTypeChoices() {
   }
 }
 
-// The table row for whichever stitch is selected, or null when a pattern is.
+// The table row for whichever stitch is selected, or null while a new one is
+// being named — there is nothing to point at until it has a name.
 function selectedTypeRow() {
   const wanted = document.getElementById("rowsAre").value;
-  if (wanted === TEMPLATE_CHOICE) return null;
+  if (wanted === CUSTOM_CHOICE) return null;
 
   const rows = [...typeRows.querySelectorAll(".typeRow")];
   return rows.find(function (row) {
     return row.querySelector(".typeName").value === wanted;
   }) || rows[0] || null;
+}
+
+// A one-letter code for a new stitch, taken from its own name where it can be
+// so it stays guessable when a pattern is written later. Codes have to be
+// unique or the parser cannot tell two stitches apart.
+function freeCodeFor(name) {
+  const taken = new Set(readTypes().map(function (t) { return t.code; }));
+  const letters = String(name).toLowerCase().replace(/[^a-z]/g, "");
+
+  for (const letter of letters) if (!taken.has(letter)) return letter;
+  for (const letter of "abcdefghijklmnopqrstuvwxyz") {
+    if (!taken.has(letter)) return letter;
+  }
+  return "";
 }
 
 document.getElementById("addType").addEventListener("click", function () {

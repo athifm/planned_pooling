@@ -248,6 +248,52 @@ function invertMatrix(M) {
   return a.map(function (row) { return row.slice(n); });
 }
 
+// How many independent equations a set of swatches contains.
+//
+// While this is below the number of unknowns nothing can be solved, and rank
+// is the only honest measure of progress towards it: every score is
+// ridge-propped nonsense until the design is full rank, and comparing two
+// kinds of nonsense picks whichever is cheaper rather than whichever helps.
+function rankOf(rows) {
+  if (rows.length === 0) return 0;
+
+  const width = rows[0].length;
+  const a = rows.map(function (row) { return row.slice(); });
+
+  // The columns are stitch counts, so they run from single figures to
+  // thousands. A tolerance relative to the largest of them is the only one
+  // that means the same thing in every column.
+  let scale = 0;
+  for (const row of a) for (const v of row) scale = Math.max(scale, Math.abs(v));
+  const tiny = scale * 1e-9;
+
+  let rank = 0;
+  for (let col = 0; col < width && rank < a.length; col++) {
+    let pivot = -1;
+    let biggest = tiny;
+    for (let r = rank; r < a.length; r++) {
+      if (Math.abs(a[r][col]) > biggest) {
+        biggest = Math.abs(a[r][col]);
+        pivot = r;
+      }
+    }
+    if (pivot < 0) continue;
+
+    const swap = a[rank];
+    a[rank] = a[pivot];
+    a[pivot] = swap;
+
+    for (let r = 0; r < a.length; r++) {
+      if (r === rank) continue;
+      const f = a[r][col] / a[rank][col];
+      if (f === 0) continue;
+      for (let c = col; c < width; c++) a[r][c] -= f * a[rank][c];
+    }
+    rank++;
+  }
+  return rank;
+}
+
 // How much each answer would wobble, given how noisy one measurement is.
 //
 // This is the whole point of the exercise: it can be computed before a single
@@ -526,15 +572,39 @@ function prescribeSwatches(request) {
     let best = null;
     for (const c of candidates) {
       if (cost + swatchCost(c) + reserve > budget) continue;
-      const score = worstRatio(rows.concat([swatchRow(c, unknowns)]), targets, sigma, ridge);
-      if (!best || score < best.score) best = { swatch: c, score: score };
+
+      const trial = rows.concat([swatchRow(c, unknowns)]);
+      // Rank first, score second.
+      //
+      // Without this the ridge term misleads the search: a second copy of a
+      // shape already chosen lowers the propped-up variance a little, so it
+      // scores better than the differently shaped swatch that would actually
+      // separate the unknowns. With four stitch types it bought eight copies
+      // of the same small swatch and never prescribed a purl one at all.
+      const rank = rankOf(trial);
+      const score = worstRatio(trial, targets, sigma, ridge);
+
+      const better = !best ||
+        rank > best.rank ||
+        (rank === best.rank && score < best.score);
+
+      if (better) best = { swatch: c, score: score, rank: rank };
     }
     if (!best) break;
 
     // Only once the system is solvable at all does diminishing return mean
     // anything — before that every swatch looks like a poor improvement on
-    // infinity.
-    if (chosen.length >= unknowns.length && best.score > before * (1 - worthwhile)) break;
+    // infinity, and stopping leaves a set that answers nothing.
+    //
+    // This used to approximate solvability by counting swatches against
+    // unknowns, which is not the same thing: with four stitch types the search
+    // would collect seven swatches for seven unknowns, find them rank
+    // deficient, see no single addition fix it, and stop with half the budget
+    // unspent. Asking whether it can actually be solved costs one small matrix
+    // inversion a step.
+    const solvableNow = rankOf(rows) === unknowns.length;
+
+    if (solvableNow && best.score > before * (1 - worthwhile)) break;
 
     chosen.push(best.swatch);
     rows.push(swatchRow(best.swatch, unknowns));

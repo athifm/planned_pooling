@@ -66,13 +66,13 @@ function isCircular() {
 // control and wrong in prose.
 const SECTION_NAMES = {
   display: "Display",
-  stitchTypes: "Stitches",
+  turning: "Turning",
   calibration: "Calibration",
 };
 
 const SECTIONS = [
   "display",      // zoom
-  "stitchTypes",  // the type table, in place of one yarn-per-stitch figure
+  "turning",      // yarn spent turning at each row end
 
   "calibration",  // measuring your own figures from swatches
 ];
@@ -184,7 +184,11 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
 }
 
 function templateActive() {
-  return document.getElementById("rowsAre").value === TEMPLATE_CHOICE;
+  return document.querySelector("input[name=rowMode]:checked").value === "pattern";
+}
+
+function namingCustomStitch() {
+  return document.getElementById("rowsAre").value === CUSTOM_CHOICE;
 }
 
 // The single yarn-per-stitch box is a view onto the selected type's row, not a
@@ -198,6 +202,11 @@ function syncStitchFigure() {
   const row = selectedTypeRow();
   if (!row) return;
   perStitchInput.value = row.querySelector(".typeAmount").value;
+
+  // Named, because the dropdown above has already said which stitch this is
+  // and a bare "yarn per stitch" would be asking again.
+  document.getElementById("perStitchLabel").textContent =
+    "Yarn per " + row.querySelector(".typeName").value + " stitch";
 }
 
 function stitchFigureEdited() {
@@ -207,11 +216,11 @@ function stitchFigureEdited() {
 }
 
 function turningActive() {
-  // Nothing to decide. Knitting in the round never turns the work, and flat
-  // knitting always does — so the only question is what a turn costs, and a
-  // figure of zero answers it for anyone who has not measured one. Asking as
-  // well would be asking twice.
-  return !isCircular();
+  // Flat knitting always turns, so this is not a question about the knitting.
+  // It is a question about whether you have measured what a turn costs, and
+  // most people never have — which is why it sits shut at the end of the panel
+  // rather than putting an unmeasured zero at eye level.
+  return sectionOpen("turning") && !isCircular();
 }
 
 // Yarn per stitch spent casting on, in metres.
@@ -740,30 +749,6 @@ function updateTemplateMessage() {
 // What the template does to the rest of the form: locks the count boxes, or
 // gives them back. State only — no sizing and no drawing, so regenerate() can
 // call it first and then do those once for everybody.
-// One stitch at a time, only its own cost is in force, and that is the figure
-// at the top of the Stitches panel — visible whether the table is open or not.
-// A pattern is different: it uses every type's cost at once, so leaving the
-// table shut would let figures nobody can see decide the fabric.
-//
-// So a pattern opens the table, and says why rather than doing it quietly.
-function syncTemplateDependency() {
-  const types = document.querySelector('[data-section="stitchTypes"]');
-  const note = document.getElementById("templateDependency");
-
-  if (!templateActive()) {
-    note.textContent = "";
-    return;
-  }
-
-  // Setting open fires a toggle, which regenerates again — and finds it
-  // already open, so it settles at once.
-  if (!types.open) types.open = true;
-
-  note.textContent =
-    "The stitch table is open because a pattern uses every stitch's figure, " +
-    "not just one of them.";
-}
-
 // The codes as they stand, so a pattern can be written without scrolling back
 // to the table to remember what you called things.
 function updateCodeLegend() {
@@ -777,12 +762,16 @@ function updateCodeLegend() {
 }
 
 function syncTemplateState() {
-  syncTemplateDependency();
+  const active = templateActive();
+
+  // Which of the two answers is on show. The stitch table rides on this too:
+  // "more than one kind of stitch" was never a decision separate from "what is
+  // in a row", so it appears with the pattern that needs it and nowhere else.
+  document.body.classList.toggle("patterned", active);
+  document.body.classList.toggle("customStitch", !active && namingCustomStitch());
+
   updateCodeLegend();
   syncStitchFigure();
-
-  const active = templateActive();
-  document.body.classList.toggle("patterned", active);
 
   // A template states the fabric's size in both directions, so neither box is
   // the user's to edit and there is nothing for the grips to drag.
@@ -861,7 +850,7 @@ function problems() {
   // With the table shut only the selected stitch is in force, and the figure
   // at the top of the panel is where it is on show — so that is what gets
   // marked, rather than a row nobody can see.
-  if (sectionOpen("stitchTypes")) {
+  if (templateActive()) {
     for (const row of typeRows.querySelectorAll(".typeRow")) {
       const box = row.querySelector(".typeAmount");
       if (!(Number(box.value) > 0)) bad(box, "A stitch has to use some yarn.");
@@ -1770,6 +1759,23 @@ typeUnitInput.addEventListener("change", function () {
 // The figure at the top of the panel is the selected type's row seen from
 // outside, so editing it edits the row.
 perStitchInput.addEventListener("change", stitchFigureEdited);
+
+// Naming a new stitch is how one gets added without the table, which only
+// appears with a pattern. It takes the figure already on screen as its cost,
+// so the answer to "how much yarn" carries over rather than resetting.
+document.getElementById("customName").addEventListener("change", function () {
+  const box = document.getElementById("customName");
+  const name = box.value.trim();
+  if (name === "") return;
+
+  addTypeRow(name, freeCodeFor(name), num(perStitchInput) || 5);
+  box.value = "";
+
+  refreshTypeChoices();
+  document.getElementById("rowsAre").value = name;
+  refreshCalTypes();
+  refreshPrescription();
+});
 
 typeRows.addEventListener("change", function () {
   refreshTypeChoices();

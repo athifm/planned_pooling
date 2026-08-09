@@ -180,72 +180,37 @@
 
     </fieldset>
 
-    <fieldset id="stitches">
-      <legend>Stitches</legend>
-
-      <!-- One unit for everything this panel measures: the figure below, every
-           row of the table, and the turn. They are all a length of yarn per
-           one of something. -->
-      <div class="fields">
-        <label for="typeUnit">Measured in</label>
-        <select id="typeUnit">
-          <option value="m">metres</option>
-          <option value="cm" selected>centimetres</option>
-          <option value="ft">feet</option>
-          <option value="yd">yards</option>
-          <option value="in">inches</option>
-        </select>
-      </div>
-
-      <!-- Not a value of its own: a view onto whichever type the Rows panel
-           has selected. There is one cost per named stitch, and this is the
-           short way to see it when the whole table is more than you need. -->
-      <div class="fields oneStitchOnly">
-        <label for="perStitch">Yarn per stitch</label>
-        <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
-      </div>
-
-      <!-- Not a stitch, but the same kind of declaration: yarn spent per turn
-           rather than per stitch. Nothing turns in the round, so it is only
-           here when the fabric is flat. Zero by default, which is how a
-           knitter who has never measured it gets no turning counted without
-           having to say so. -->
-      <div class="fields flatOnly">
-        <label for="turnPerRow">Yarn per turn</label>
-        <input type="number" id="turnPerRow" value="0" step="0.1" min="0">
-      </div>
-      <p class="hint flatOnly" id="turningNote"></p>
-
-      <details class="subSection" data-section="stitchTypes">
-        <summary>More than one kind of stitch</summary>
-
-        <p class="hint">
-          Different stitches eat different amounts of yarn. These figures are
-          rough starting points — measure your own to get real predictions.
-        </p>
-
-        <div class="typeHeader">
-          <span>Name</span>
-          <span>Code</span>
-          <span>Yarn per stitch</span>
-          <span></span>
-        </div>
-        <div id="typeRows"></div>
-        <button type="button" id="addType">+ Add stitch type</button>
-      </details>
-    </fieldset>
-
-    <!-- What goes in a row: one stitch all the way, or a written pattern. Both
-         answers to one question, so both live behind one control. -->
+    <!-- What goes in a row, asked before anything that depends on the answer.
+         One stitch all the way, or a repeat written out. -->
     <fieldset id="rows">
       <legend>Rows</legend>
 
-      <div class="fields">
-        <label for="rowsAre">Every row is</label>
+      <!-- Not a label wrapping the lot: a label activates its first control,
+           so a select inside one would fight the radio for clicks. -->
+      <div class="choice rowChoice">
+        <label for="rowModeSingle">
+          <input type="radio" name="rowMode" id="rowModeSingle" value="single" checked>
+          Every row is
+        </label>
         <select id="rowsAre"></select>
+        <input type="text" id="customName" class="customOnly"
+               placeholder="call it" aria-label="Name for the new stitch">
       </div>
 
-      <div class="templateOnly">
+      <label class="choice">
+        <input type="radio" name="rowMode" value="pattern">
+        Pattern repeat
+      </label>
+
+      <!-- A taste of the other option while it is unchosen, so the choice is
+           between two things you can picture rather than one and a word. -->
+      <p class="hint patternTaste">
+        Rows written out stitch by stitch, like
+        <code>s</code> <code>*3k</code> <code>3p*23</code> <code>s</code> —
+        a slipped edge, then three knit and three purl repeated across.
+      </p>
+
+      <div class="patternOnly">
         <p class="hint">
           One entry per box. <code>3k</code> means three knits.
           A <code>*</code> before a stitch opens a group and one after it
@@ -270,8 +235,64 @@
           follow from it. Every row has to come out the same width.
         </p>
         <p class="hint" id="templateResult"></p>
-        <p class="hint" id="templateDependency"></p>
       </div>
+    </fieldset>
+
+    <fieldset id="stitches">
+      <legend>Stitches</legend>
+
+      <!-- One unit for everything this panel measures: the figure below, every
+           row of the table, and the turn. They are all a length of yarn per
+           one of something. -->
+      <div class="fields">
+        <label for="typeUnit">Measured in</label>
+        <select id="typeUnit">
+          <option value="m">metres</option>
+          <option value="cm" selected>centimetres</option>
+          <option value="ft">feet</option>
+          <option value="yd">yards</option>
+          <option value="in">inches</option>
+        </select>
+      </div>
+
+      <!-- One stitch to a row means one figure, named after it. A view onto
+           that type's row in the table below, not a value of its own. -->
+      <div class="fields oneStitchOnly">
+        <label for="perStitch" id="perStitchLabel">Yarn per stitch</label>
+        <input type="number" id="perStitch" value="5" step="0.1" min="0.01">
+      </div>
+
+      <!-- The table appears with the pattern that needs it, rather than behind
+           a choice of its own: "more than one kind of stitch" was never a
+           separate decision from "what is in a row". -->
+      <div class="patternOnly">
+        <p class="hint">
+          Different stitches eat different amounts of yarn. These figures are
+          rough starting points — measure your own to get real predictions.
+        </p>
+
+        <div class="typeHeader">
+          <span>Name</span>
+          <span>Code</span>
+          <span>Yarn per stitch</span>
+          <span></span>
+        </div>
+        <div id="typeRows"></div>
+        <button type="button" id="addType">+ Add stitch type</button>
+      </div>
+
+      <!-- Last, and shut: flat knitting always turns, but the yarn it costs is
+           something most people have never measured and do not want asked
+           about. Closed means not counted. -->
+      <details class="subSection flatOnly" data-section="turning">
+        <summary>Include the yarn used turning rows?</summary>
+
+        <div class="fields">
+          <label for="turnPerRow">Yarn per turn</label>
+          <input type="number" id="turnPerRow" value="0" step="0.1" min="0">
+        </div>
+        <p class="hint" id="turningNote"></p>
+      </details>
     </fieldset>
 
     <fieldset id="castOn">

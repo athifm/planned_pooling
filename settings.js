@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 22;
+const SETTINGS_VERSION = 23;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -62,8 +62,9 @@ const DEFAULT_SETTINGS = {
     { name: "slipped", code: "s", perStitch: 2.5 },
   ],
   typeUnit: "cm",
-  // Either a stitch type name or the pattern sentinel: one control, because
-  // "what goes in a row" is one question.
+  // Which of the two answers is in force, and which stitch the simple one
+  // means.
+  rowMode: "single",
   rowsAre: "knit",
   // Which sections have been opened. A closed section keeps its values but
   // does not apply them, so this is part of what is in force rather than a
@@ -167,6 +168,7 @@ function readSettings() {
     construction: document.querySelector("input[name=construction]:checked").value,
     types: readTypes(),
     typeUnit: fieldValue("typeUnit"),
+    rowMode: document.querySelector("input[name=rowMode]:checked").value,
     rowsAre: fieldValue("rowsAre"),
     openSections: [...document.querySelectorAll("[data-section]")]
       .filter(function (box) { return box.open; })
@@ -225,6 +227,7 @@ function applySettings(s) {
   // The dropdown's options come from the rows, so it has to be rebuilt before
   // a value can be selected in it.
   refreshTypeChoices();
+  document.querySelector("input[name=rowMode][value=" + s.rowMode + "]").checked = true;
   document.getElementById("rowsAre").value = s.rowsAre;
 
   // Mirrors the type table, so it can only be built once that exists.
