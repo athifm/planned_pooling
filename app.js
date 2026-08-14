@@ -238,6 +238,26 @@ function endAllowanceMetres() {
   return measuredCastOnMetres() + measuredBindOffMetres();
 }
 
+// How far into the yarn the fabric's very first stitch actually falls, in
+// metres — the chosen band's own preceding length, plus how far into it.
+//
+// This folds straight into buildGrid's startMetres alongside the cast-on
+// rather than needing a parallel mechanism: both answer the same question,
+// "how much of this yarn is spent before the first stitch," they just have
+// different real-world causes — one is what you cast on with, this is simply
+// where in its colour cycle the ball already was when you picked it up.
+function startPhaseMetres(sequence) {
+  if (sequence.length === 0) return 0;
+  const index = Math.min(Math.max(num(startBandInput) || 0, 0), sequence.length - 1);
+
+  let before = 0;
+  for (let i = 0; i < index; i++) before += sequence[i].length;
+
+  const unit = lengthUnitInput.value;
+  const offset = toMetres(num(startOffsetInput), unit);
+  return before + Math.max(0, Math.min(offset, sequence[index].length));
+}
+
 // The settings actually in force, as opposed to the ones sitting in the form.
 //
 // A closed section keeps its values — they are only hidden, so opening it
@@ -496,13 +516,16 @@ function draw() {
     consumptionAt = uniformConsumption(effective.consumptionMetres);
   }
 
+  const sequence = readSequence();
+
   // Yarn gone before the first stitch, and yarn spent at both ends together.
   // They are different numbers: the first moves the pattern, the second only
-  // adds to the bill.
-  const startMetres = effective.castOnMetres * stitches;
+  // adds to the bill. The cast-on and where the ball already was in its
+  // colour cycle are two separate causes of the same thing — both are yarn
+  // spent before stitch one — so they simply add.
+  const startMetres = effective.castOnMetres * stitches + startPhaseMetres(sequence);
   const allowance = effective.endAllowanceMetres * stitches;
 
-  const sequence = readSequence();
   const grid = buildGrid(
     sequence, stitches, rows, consumptionAt, circular, effective.turnMetres, startMetres
   );
@@ -1701,9 +1724,13 @@ lengthUnitInput.addEventListener("change", function () {
   // Fades are lengths in the same unit, so they convert alongside the bands.
   convertBoxes(document.querySelectorAll(".colorRow .length"), previousLengthUnit, unit);
   convertBoxes([document.getElementById("fadeAll")], previousLengthUnit, unit);
-  convertBoxes([skeinLengthInput, tailInput], previousLengthUnit, unit);
+  convertBoxes([skeinLengthInput, tailInput, startOffsetInput], previousLengthUnit, unit);
   convertFades(previousLengthUnit, unit);
   resyncFadeSliders();
+  // The offset and the band it is measured into just converted by the same
+  // ratio, so their relationship still holds — this only refreshes the max
+  // attribute and the swatch, not the value itself.
+  clampStartOffset();
   previousLengthUnit = unit;
 });
 

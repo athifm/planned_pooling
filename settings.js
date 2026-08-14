@@ -10,7 +10,7 @@ const STORAGE_KEY = "planned-pooling";
 // Bump this whenever the shape below changes. Saved data in an older shape is
 // thrown away rather than half-read — a missing field would otherwise surface
 // as NaN somewhere deep in the pipeline, long after the real cause.
-const SETTINGS_VERSION = 24;
+const SETTINGS_VERSION = 25;
 
 // Lengths here are in whatever unit the boxes are showing, not metres. Storing
 // what was actually typed means a reload shows the same numbers back, rather
@@ -30,6 +30,11 @@ const DEFAULT_SETTINGS = {
     { color: "#008000", length: 4, fade: 0 },
   ],
   lengthUnit: "m",
+  // Which band the fabric's first stitch falls in, and how far into it — 0/0
+  // is the very start of the first band, which is what every fabric assumed
+  // unconditionally before this existed.
+  startBand: 0,
+  startOffset: 0,
   useFades: false,
   fadeAll: 0,
   skeinLength: 0,
@@ -152,6 +157,8 @@ function readSettings() {
       };
     }),
     lengthUnit: fieldValue("lengthUnit"),
+    startBand: fieldNumber("startBand"),
+    startOffset: fieldNumber("startOffset"),
     useFades: document.getElementById("useFades").checked,
     fadeAll: fieldNumber("fadeAll"),
     skeinLength: fieldNumber("skeinLength"),
@@ -200,6 +207,12 @@ function readSettings() {
 // Push a settings object back into the form.
 function applySettings(s) {
   setColorRows(s.sequence);
+  // setColorRows already rebuilt the dropdown to match the restored bands;
+  // this only has to pick the saved one and let it clamp the offset.
+  startBandInput.value = s.startBand;
+  startOffsetInput.value = s.startOffset;
+  syncStartSwatch();
+  clampStartOffset();
 
   setControlsWidth(s.controlsWidth);
   document.getElementById("zoom").value = s.zoom;

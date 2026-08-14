@@ -142,7 +142,10 @@ function addColorRow(color, length, fade) {
   });
 
   // A longer band moves the fade's starting point, but not its length.
-  len.addEventListener("change", function () { setFade(currentFade()); });
+  len.addEventListener("change", function () {
+    setFade(currentFade());
+    clampStartOffset();
+  });
 
   setFade(fade || 0);
 
@@ -153,13 +156,17 @@ function addColorRow(color, length, fade) {
     // A yarn with no colors makes no sense — always keep one row.
     if (colorRows.children.length > 1) {
       row.remove();
+      refreshStartBand();
       regenerate();
     }
   });
 
   // A row's track ends in the *next* row's colour, so changing any swatch
   // repaints its neighbour above as well as itself.
-  swatch.addEventListener("input", refreshFadeVisuals);
+  swatch.addEventListener("input", function () {
+    refreshFadeVisuals();
+    syncStartSwatch();
+  });
 
   row.appendChild(swatch);
   row.appendChild(len);
@@ -240,6 +247,7 @@ new ResizeObserver(refreshFadeVisuals).observe(colorRows);
 
 document.getElementById("addColor").addEventListener("click", function () {
   addColorRow("#cccccc", 1);
+  refreshStartBand();
 });
 
 // Replace the whole list. The starting rows are no longer created here — they
@@ -278,7 +286,76 @@ function setColorRows(sequence) {
   for (const band of sequence) {
     addColorRow(band.color, band.length, band.fade);
   }
+  refreshStartBand();
 }
+
+// --- Where this ball of yarn begins -----------------------------------------
+//
+// The fabric used to always start at the very beginning of the first band,
+// because that was the only point the app could be sure of. A real skein is
+// rarely picked up exactly there — this says which band the first stitch
+// actually falls in, and how far into it.
+//
+// A band, not a bare distance: "a bit into the blue" is something a knitter
+// can find on real yarn without adding up every band ahead of it.
+
+const startBandInput = document.getElementById("startBand");
+const startOffsetInput = document.getElementById("startOffset");
+const startSwatch = document.getElementById("startSwatch");
+
+// Rebuilt whenever a colour is added or removed — the options are the bands
+// themselves. Selection is held by position, the same rule refreshTypeChoices
+// uses for a list whose members have no name to match back up by.
+function refreshStartBand() {
+  const wantedIndex = startBandInput.selectedIndex;
+  const rows = [...colorRows.querySelectorAll(".colorRow")];
+
+  startBandInput.textContent = "";
+  rows.forEach(function (row, i) {
+    const option = document.createElement("option");
+    option.value = String(i);
+    option.textContent = "Color " + (i + 1);
+    startBandInput.appendChild(option);
+  });
+
+  startBandInput.selectedIndex = Math.min(Math.max(wantedIndex, 0), rows.length - 1);
+
+  syncStartSwatch();
+  clampStartOffset();
+}
+
+// The swatch beside the dropdown, since a native <select> cannot show a
+// colour inside its own options.
+function syncStartSwatch() {
+  const rows = [...colorRows.querySelectorAll(".colorRow")];
+  const chosen = rows[Number(startBandInput.value) || 0];
+  startSwatch.style.background = chosen
+    ? chosen.querySelector("input[type=color]").value
+    : "";
+}
+
+// The offset cannot run into or past the next band — that would just be a
+// roundabout way of picking a different band, so it is clamped here the same
+// way a fade's position is clamped against its own band's length.
+function clampStartOffset() {
+  const rows = [...colorRows.querySelectorAll(".colorRow")];
+  const chosen = rows[Number(startBandInput.value) || 0];
+  const bandLength = chosen ? Number(chosen.querySelector(".length").value) || 0 : 0;
+
+  startOffsetInput.max = bandLength;
+  const typed = Number(startOffsetInput.value) || 0;
+  startOffsetInput.value = Math.max(0, Math.min(typed, bandLength));
+}
+
+startBandInput.addEventListener("change", function () {
+  syncStartSwatch();
+  clampStartOffset();
+});
+
+// The band's own change listener covers picking a different band; this
+// covers typing an out-of-range number directly into the box, which the
+// input's max attribute only hints at rather than actually preventing.
+startOffsetInput.addEventListener("change", clampStartOffset);
 
 // --- Stitch type rows -------------------------------------------------------
 // Same machinery as the colour rows: a name, a consumption, a remove button.
