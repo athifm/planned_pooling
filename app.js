@@ -172,8 +172,7 @@ function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
   // over a fabric are different sizes of thing.
   let text = "Casting on " + stitches + " stitches takes " +
     fromMetres(castOnPerStitch, unit).toFixed(2) + " " + unit + " each, " +
-    start.toFixed(2) + " m in all — so the fabric begins that far into the " +
-    "ball, and the colors shift with it.";
+    start.toFixed(2) + " m in all.";
 
   if (bindOff > 0) {
     text += " Binding off adds " + bindOff.toFixed(2) + " m at the far end, " +
@@ -225,8 +224,10 @@ function turningActive() {
 
 // Yarn per stitch spent casting on, in metres.
 //
-// Only the cast-on moves the pattern, because only it comes off the ball
-// before the first stitch. Both ends together are what the fabric costs.
+// Doesn't move the pattern: the picked start point is where the first
+// stitch is cast on, not where the ball was before casting on began, so
+// cast-on yarn is a cost to the total but not a phase shift. Both ends
+// together are what the fabric costs.
 //
 // Neither hides behind a section: every fabric is cast on and bound off, so
 // there is nothing here to switch on or off — only figures to improve.
@@ -241,11 +242,9 @@ function endAllowanceMetres() {
 // How far into the yarn the fabric's very first stitch actually falls, in
 // metres — the chosen band's own preceding length, plus how far into it.
 //
-// This folds straight into buildGrid's startMetres alongside the cast-on
-// rather than needing a parallel mechanism: both answer the same question,
-// "how much of this yarn is spent before the first stitch," they just have
-// different real-world causes — one is what you cast on with, this is simply
-// where in its colour cycle the ball already was when you picked it up.
+// This is buildGrid's startMetres directly: the point the knitter picks is
+// where the first stitch is cast on, so it is where the pattern begins, full
+// stop — cast-on yarn is spent alongside it, not before it.
 function startPhaseMetres(sequence) {
   if (sequence.length === 0) return 0;
   const index = Math.min(Math.max(num(startBandInput) || 0, 0), sequence.length - 1);
@@ -518,12 +517,11 @@ function draw() {
 
   const sequence = readSequence();
 
-  // Yarn gone before the first stitch, and yarn spent at both ends together.
-  // They are different numbers: the first moves the pattern, the second only
-  // adds to the bill. The cast-on and where the ball already was in its
-  // colour cycle are two separate causes of the same thing — both are yarn
-  // spent before stitch one — so they simply add.
-  const startMetres = effective.castOnMetres * stitches + startPhaseMetres(sequence);
+  // Where in the yarn's colour cycle the first stitch falls — chosen
+  // directly by the knitter, not shifted by cast-on. Cast-on and bind-off
+  // are yarn spent, so they still count toward the total (allowance below),
+  // just not toward where the pattern starts.
+  const startMetres = startPhaseMetres(sequence);
   const allowance = effective.endAllowanceMetres * stitches;
 
   const grid = buildGrid(
@@ -543,7 +541,8 @@ function draw() {
     sequence
   );
   // Where in the ball this point falls, which is what the next ball has to
-  // match — so the cast-on counts, having come off the ball before any of it.
+  // match — starting from the same point the knitter picked, plus whatever
+  // the stitches since then have used.
   showJoinAdvice(
     sequence,
     join === null
