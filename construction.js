@@ -55,10 +55,29 @@ function consumedThrough(k, stitchesPerRow, consumptionAt, extraPerRow) {
 // a stitch, because a turn occupies no place in the fabric: it moves the yarn
 // on without adding a column.
 //
-// startMetres is yarn already gone before the first stitch — the cast-on. It
-// comes off the ball like everything else, so the whole pattern begins that
-// far in. Passed as a starting position rather than folded into the first
-// stitch, because it belongs to no stitch and must not colour one.
+// startMetres is yarn already gone before the first stitch — where in its
+// colour cycle the ball was when the knitter picked it up, plus the cast-on
+// that has come off it since. It comes off the ball like everything else, so
+// the whole pattern begins that far in. Passed as a starting position rather
+// than folded into the first stitch, because it belongs to no stitch and
+// must not colour one.
+//
+// Adding 0.05 to itself thousands of times drifts, because 0.05 has no exact
+// binary representation — the error accumulates until stitches near a colour
+// boundary fall on the wrong side of it. Converting to whole micrometres once
+// makes the running total integer arithmetic, which is exact. colorAt does not
+// care what the unit is, so long as positions and band lengths share one.
+const UM = 1000000;
+function sequenceToUm(sequence) {
+  return sequence.map(function (band) {
+    return {
+      color: band.color,
+      length: Math.round(band.length * UM),
+      fade: Math.round((band.fade || 0) * UM),
+    };
+  });
+}
+
 function buildGrid(sequence, stitchesPerRow, rows, consumptionAt, circular, extraPerRow, startMetres){
 
 const grid = [];
@@ -66,20 +85,7 @@ for (let r = 0; r < rows; r++) {
   grid.push([]);
 }
 
-// Adding 0.05 to itself thousands of times drifts, because 0.05 has no exact
-// binary representation — the error accumulates until stitches near a colour
-// boundary fall on the wrong side of it. Converting to whole micrometres once
-// makes the running total integer arithmetic, which is exact. colorAt does not
-// care what the unit is, so long as positions and band lengths share one.
-const UM = 1000000;
-const sequenceUm = sequence.map(function (band) {
-  return {
-    color: band.color,
-    length: Math.round(band.length * UM),
-    fade: Math.round((band.fade || 0) * UM),
-  };
-});
-
+const sequenceUm = sequenceToUm(sequence);
 const extraUm = Math.round((extraPerRow || 0) * UM);
 
 let used = Math.round((startMetres || 0) * UM)
@@ -97,6 +103,22 @@ for (let k = 0; k < stitchesPerRow * rows; k++) {
   if (extraUm && (k + 1) % stitchesPerRow === 0) used += extraUm;
 }
   return grid
+}
+
+// The cast-on: seen and worked before row 0, so it is technically the fabric's
+// first row, not just a length subtracted from where the pattern starts.
+// Always left to right and never turns — a cast-on is one pass, not a knitted
+// row — so there is no serpentine here the way there is in buildGrid.
+function buildCastOnRow(sequence, stitches, castOnStitchMetres, startMetres) {
+  const sequenceUm = sequenceToUm(sequence);
+  const stitchUm = Math.round((castOnStitchMetres || 0) * UM);
+  let used = Math.round((startMetres || 0) * UM);
+  const row = [];
+  for (let c = 0; c < stitches; c++) {
+    row.push(colorAt(sequenceUm, used + Math.floor(stitchUm / 2)));
+    used += stitchUm;
+  }
+  return row
 }
 
 

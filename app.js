@@ -517,13 +517,17 @@ function draw() {
 
   const sequence = readSequence();
 
-  // Where in the yarn's colour cycle the first stitch falls — chosen
-  // directly by the knitter, not shifted by cast-on. Cast-on and bind-off
-  // are yarn spent, so they still count toward the total (allowance below),
-  // just not toward where the pattern starts.
-  const startMetres = startPhaseMetres(sequence);
+  // Where in the yarn's colour cycle the *cast-on* falls — chosen directly by
+  // the knitter, since casting on is the first thing that actually happens to
+  // the ball. The first knit row picks up wherever the cast-on's own yarn use
+  // leaves off.
+  const castOnStartMetres = startPhaseMetres(sequence);
+  const startMetres = castOnStartMetres + effective.castOnMetres * stitches;
   const allowance = effective.endAllowanceMetres * stitches;
 
+  const castOnRow = buildCastOnRow(
+    sequence, stitches, effective.castOnMetres, castOnStartMetres
+  );
   const grid = buildGrid(
     sequence, stitches, rows, consumptionAt, circular, effective.turnMetres, startMetres
   );
@@ -531,8 +535,12 @@ function draw() {
   const join = reportedJoin(stitches, rows);
   const boundary = join === null ? null : joinBoundaryFor(join, stitches, circular);
 
+  // The cast-on strip is seen but not gauge-scaled, so it comes off the top
+  // of the bitmap before the rows divide up what's left.
+  const bandPxScaled = CAST_ON_BAND_PX * (window.devicePixelRatio || 1);
   drawGrid(
-    grid, canvas.width / stitches, canvas.height / rows, seams, boundary
+    grid, canvas.width / stitches, (canvas.height - bandPxScaled) / rows,
+    seams, boundary, castOnRow, bandPxScaled
   );
 
   showYarnNeeded(
@@ -541,8 +549,8 @@ function draw() {
     sequence
   );
   // Where in the ball this point falls, which is what the next ball has to
-  // match — starting from the same point the knitter picked, plus whatever
-  // the stitches since then have used.
+  // match — starting from the first knit row, plus whatever the stitches
+  // since then have used.
   showJoinAdvice(
     sequence,
     join === null
@@ -580,19 +588,25 @@ function resizeCanvasToWrapper() {
 // the pixels and could land one off what was actually typed.
 let programmaticResize = false;
 
+// Height of the cast-on strip above row 0, in CSS pixels. Fixed rather than
+// gauge-scaled — it is an edge marking, not a stitch row, so "Rows" keeps
+// meaning knit rows only and this never enters the count.
+const CAST_ON_BAND_PX = 10;
+
 // Counts changed, so the box has to change to suit.
 function sizeWrapperFromCounts() {
   const cell = cellSize();
   programmaticResize = true;
   canvasWrap.style.width  = Math.round(num(stitchesInput) * cell.w) + "px";
-  canvasWrap.style.height = Math.round(num(rowsInput) * cell.h) + "px";
+  canvasWrap.style.height =
+    Math.round(num(rowsInput) * cell.h) + CAST_ON_BAND_PX + "px";
 }
 
 // The box was dragged, so the counts have to change to suit.
 function countsFromWrapper() {
   const cell = cellSize();
   const counts = countsFromPixels(
-    canvasWrap.clientWidth, canvasWrap.clientHeight, cell.w, cell.h
+    canvasWrap.clientWidth, canvasWrap.clientHeight - CAST_ON_BAND_PX, cell.w, cell.h
   );
   // With a template the fabric's size is whatever the template says it is —
   // dragging must not overwrite either figure.

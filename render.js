@@ -14,13 +14,29 @@ const ctx = canvas.getContext("2d");
 // bottom of that row across those columns, steps, and continues along the top
 // for the rest. Told which columns, the renderer needs to know nothing about
 // serpentine or balls of yarn.
-function drawGrid(grid, cellWidth, cellHeight, seamColumns, joinBoundary){
+//
+// castOnRow is an array of colors, one per stitch, or null — the cast-on is
+// worked before row 0, so it is drawn above it as its own thin strip, not
+// scaled to a row's height like an ordinary stitch would be. castOnBandPx is
+// that strip's height in device pixels; 0 when there is no cast-on row to show.
+function drawGrid(grid, cellWidth, cellHeight, seamColumns, joinBoundary, castOnRow, castOnBandPx){
 ctx.clearRect(0, 0, canvas.width, canvas.height);
+const bandPx = castOnBandPx || 0;
+
+if (castOnRow) {
+  for (let c = 0; c < castOnRow.length; c++) {
+    const x0 = Math.round(c * cellWidth);
+    const x1 = Math.round((c + 1) * cellWidth);
+    ctx.fillStyle = castOnRow[c];
+    ctx.fillRect(x0, 0, x1 - x0, bandPx);
+  }
+}
+
 for (let r = 0; r < grid.length; r++) {
   // Round each cell's edges to whole pixels so neighbours abut exactly.
   // Fractional edges get anti-aliased into semi-transparent seams.
-  const y0 = Math.round(r * cellHeight);
-  const y1 = Math.round((r + 1) * cellHeight);
+  const y0 = Math.round(bandPx + r * cellHeight);
+  const y1 = Math.round(bandPx + (r + 1) * cellHeight);
 
   for (let c = 0; c < grid[r].length; c++) {
     const x0 = Math.round(c * cellWidth);
@@ -31,7 +47,7 @@ for (let r = 0; r < grid.length; r++) {
   }
 }
 
-if (joinBoundary) drawJoinBoundary(joinBoundary, cellWidth, cellHeight);
+if (joinBoundary) drawJoinBoundary(joinBoundary, cellWidth, cellHeight, bandPx);
 
 if (seamColumns) {
   // The canvas bitmap is bigger than its CSS size on high-density screens,
@@ -51,11 +67,11 @@ if (seamColumns) {
 // Where one ball of yarn ended. The line steps mid-row because that is where
 // the ball actually ran out — a straight rule across the fabric would claim a
 // whole row came off one ball when half of it did not.
-function drawJoinBoundary(boundary, cellWidth, cellHeight) {
+function drawJoinBoundary(boundary, cellWidth, cellHeight, bandPx) {
   const scale = canvas.clientWidth ? canvas.width / canvas.clientWidth : 1;
 
-  const low = Math.round((boundary.row + 1) * cellHeight);
-  const high = Math.round(boundary.row * cellHeight);
+  const low = Math.round(bandPx + (boundary.row + 1) * cellHeight);
+  const high = Math.round(bandPx + boundary.row * cellHeight);
   const stepStart = Math.round(boundary.fromCol * cellWidth);
   const stepEnd = Math.round((boundary.toCol + 1) * cellWidth);
 
