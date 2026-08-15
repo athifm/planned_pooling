@@ -78,7 +78,14 @@
            be sure of — but a real skein is rarely picked up exactly there.
            Band plus offset, not a single distance, because a knitter can
            find "a bit into the blue" on real yarn far more easily than a
-           cumulative figure across every band before it. -->
+           cumulative figure across every band before it.
+
+           The tail sits here rather than under Joining a new ball because
+           the first ball is only a ball joined at the start: it is picked up
+           somewhere in the sequence and loses a tail before a stitch is
+           worked, exactly like every ball after it. Kept out of the join
+           section, it is also visible without opening anything, which it has
+           to be now that it moves the colours. -->
       <div class="fields">
         <label for="startBand">Yarn starts in</label>
         <span class="withUnit">
@@ -88,6 +95,9 @@
 
         <label for="startOffset">...this far into it</label>
         <input type="number" id="startOffset" value="0" step="0.1" min="0">
+
+        <label for="tail">Tail to weave in</label>
+        <input type="number" id="tail" value="0.15" step="0.05" min="0">
       </div>
 
       <div class="fadeBlock">
@@ -125,9 +135,6 @@
 
           <label for="joinStitch">Stitch</label>
           <input type="number" id="joinStitch" min="1" step="1">
-
-          <label for="tail">Tail to weave in</label>
-          <input type="number" id="tail" value="0.15" step="0.05" min="0">
         </div>
 
         <button type="button" id="clearJoin">Clear</button>

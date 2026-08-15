@@ -417,8 +417,10 @@ function showYarnNeeded(totalMetres, sequence) {
   if (skein > 0) {
     // The first ball is not like the rest: you start knitting wherever it
     // starts, so none of it is spent reaching the right place in the sequence.
-    // Every ball after it loses the tail, and up to a whole repeat on top if it
-    // happens to begin just past the point the pattern needs.
+    // Its tail is already in totalMetres, which is why nothing comes off the
+    // first ball here. Every ball after it loses the tail, and up to a whole
+    // repeat on top if it happens to begin just past the point the pattern
+    // needs.
     const repeat = repeatLength(sequence);
     const tail = toMetres(num(tailInput), unit);
     const bestLater = skein - tail;
@@ -489,13 +491,19 @@ function draw() {
 
   const sequence = readSequence();
 
-  // Where in the yarn's colour cycle the *cast-on* falls — chosen directly by
-  // the knitter, since casting on is the first thing that actually happens to
-  // the ball. The first knit row picks up wherever the cast-on's own yarn use
-  // leaves off.
-  const castOnStartMetres = startPhaseMetres(sequence);
+  // The picked point is where the yarn is picked up, and the tail comes off
+  // it before anything is worked — so casting on begins a tail's length in,
+  // and the first knit row picks up wherever the cast-on leaves off.
+  //
+  // The first ball is only a ball joined at the start, so it loses a tail
+  // like any other. The last one loses a second tail past the bind-off; both
+  // are yarn spent, so both go in the allowance. Tails at joins in between
+  // are not counted here — how many joins there are is what showYarnNeeded is
+  // working out, so it charges those against each ball's usable length.
+  const tailMetres = toMetres(num(tailInput), lengthUnitInput.value);
+  const castOnStartMetres = startPhaseMetres(sequence) + tailMetres;
   const startMetres = castOnStartMetres + effective.castOnMetres * stitches;
-  const allowance = effective.endAllowanceMetres * stitches;
+  const allowance = effective.endAllowanceMetres * stitches + 2 * tailMetres;
 
   const castOnRow = buildCastOnRow(
     sequence, stitches, effective.castOnMetres, castOnStartMetres, circular
