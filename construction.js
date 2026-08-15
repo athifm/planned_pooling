@@ -107,15 +107,20 @@ for (let k = 0; k < stitchesPerRow * rows; k++) {
 
 // The cast-on: seen and worked before row 0, so it is technically the fabric's
 // first row, not just a length subtracted from where the pattern starts.
-// Always left to right and never turns — a cast-on is one pass, not a knitted
-// row — so there is no serpentine here the way there is in buildGrid.
-function buildCastOnRow(sequence, stitches, castOnStitchMetres, startMetres) {
+//
+// It is row -1 in the serpentine, and the direction follows from that. Flat
+// knitting turns before row 0, so the last stitch cast on is the first one
+// knitted — the strand carries on from the same edge rather than jumping the
+// width of the fabric. In the round nothing turns, so the cast-on runs the
+// same way as every round after it.
+function buildCastOnRow(sequence, stitches, castOnStitchMetres, startMetres, circular) {
   const sequenceUm = sequenceToUm(sequence);
   const stitchUm = Math.round((castOnStitchMetres || 0) * UM);
   let used = Math.round((startMetres || 0) * UM);
-  const row = [];
-  for (let c = 0; c < stitches; c++) {
-    row.push(colorAt(sequenceUm, used + Math.floor(stitchUm / 2)));
+  const row = new Array(stitches);
+  for (let i = 0; i < stitches; i++) {
+    const col = circular ? i : stitches - 1 - i;
+    row[col] = colorAt(sequenceUm, used + Math.floor(stitchUm / 2));
     used += stitchUm;
   }
   return row

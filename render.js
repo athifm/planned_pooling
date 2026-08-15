@@ -16,12 +16,11 @@ const ctx = canvas.getContext("2d");
 // serpentine or balls of yarn.
 //
 // castOnRow is an array of colors, one per stitch, or null — the cast-on is
-// worked before row 0, so it is drawn above it as its own thin strip, not
-// scaled to a row's height like an ordinary stitch would be. castOnBandPx is
-// that strip's height in device pixels; 0 when there is no cast-on row to show.
-function drawGrid(grid, cellWidth, cellHeight, seamColumns, joinBoundary, castOnRow, castOnBandPx){
+// worked before row 0, so it is drawn above it, a row like any other. The
+// renderer does not know it is a cast-on; it just draws one more row first.
+function drawGrid(grid, cellWidth, cellHeight, seamColumns, joinBoundary, castOnRow){
 ctx.clearRect(0, 0, canvas.width, canvas.height);
-const bandPx = castOnBandPx || 0;
+const bandPx = castOnRow ? Math.round(cellHeight) : 0;
 
 if (castOnRow) {
   for (let c = 0; c < castOnRow.length; c++) {

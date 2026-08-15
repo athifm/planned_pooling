@@ -498,7 +498,7 @@ function draw() {
   const allowance = effective.endAllowanceMetres * stitches;
 
   const castOnRow = buildCastOnRow(
-    sequence, stitches, effective.castOnMetres, castOnStartMetres
+    sequence, stitches, effective.castOnMetres, castOnStartMetres, circular
   );
   const grid = buildGrid(
     sequence, stitches, rows, consumptionAt, circular, effective.turnMetres, startMetres
@@ -507,12 +507,11 @@ function draw() {
   const join = reportedJoin(stitches, rows);
   const boundary = join === null ? null : joinBoundaryFor(join, stitches, circular);
 
-  // The cast-on strip is seen but not gauge-scaled, so it comes off the top
-  // of the bitmap before the rows divide up what's left.
-  const bandPxScaled = CAST_ON_BAND_PX * (window.devicePixelRatio || 1);
+  // The cast-on takes a row's worth of the bitmap, so every row on screen —
+  // it included — is the same height.
   drawGrid(
-    grid, canvas.width / stitches, (canvas.height - bandPxScaled) / rows,
-    seams, boundary, castOnRow, bandPxScaled
+    grid, canvas.width / stitches, canvas.height / (rows + CAST_ON_ROWS),
+    seams, boundary, castOnRow
   );
 
   showYarnNeeded(
@@ -560,10 +559,11 @@ function resizeCanvasToWrapper() {
 // the pixels and could land one off what was actually typed.
 let programmaticResize = false;
 
-// Height of the cast-on strip above row 0, in CSS pixels. Fixed rather than
-// gauge-scaled — it is an edge marking, not a stitch row, so "Rows" keeps
-// meaning knit rows only and this never enters the count.
-const CAST_ON_BAND_PX = 10;
+// The cast-on is drawn as one more row above row 0, so the fabric is always
+// one row taller on screen than the count says. "Rows" still means knit rows
+// only — the cast-on is not one of them, it just takes up a row's worth of
+// space because that is what it looks like on the needle.
+const CAST_ON_ROWS = 1;
 
 // Counts changed, so the box has to change to suit.
 function sizeWrapperFromCounts() {
@@ -571,14 +571,14 @@ function sizeWrapperFromCounts() {
   programmaticResize = true;
   canvasWrap.style.width  = Math.round(num(stitchesInput) * cell.w) + "px";
   canvasWrap.style.height =
-    Math.round(num(rowsInput) * cell.h) + CAST_ON_BAND_PX + "px";
+    Math.round((num(rowsInput) + CAST_ON_ROWS) * cell.h) + "px";
 }
 
 // The box was dragged, so the counts have to change to suit.
 function countsFromWrapper() {
   const cell = cellSize();
   const counts = countsFromPixels(
-    canvasWrap.clientWidth, canvasWrap.clientHeight - CAST_ON_BAND_PX, cell.w, cell.h
+    canvasWrap.clientWidth, canvasWrap.clientHeight - cell.h, cell.w, cell.h
   );
   // With a template the fabric's size is whatever the template says it is —
   // dragging must not overwrite either figure.
