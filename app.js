@@ -148,38 +148,10 @@ function updateTurningNote(perTurn, rows) {
     total.toFixed(2) + " m over " + rows + " rows.";
 }
 
-// What the cast-on is costing, and — the part worth spelling out — that it
-// moves the whole pattern. Several metres go on the needles before the first
-// stitch, so the fabric starts that far into the ball.
-function updateCastOnNote(castOnPerStitch, allowancePerStitch, stitches) {
-  const note = document.getElementById("castOnNote");
-  const unit = castOnUnitInput.value;
-
-  // The bind-off box borrows the dropdown on the row above it, so it needs
-  // telling what unit it is in rather than sitting there as a bare number.
-  document.getElementById("bindOffMeasuredTag").textContent = unit;
-
-  if (!(castOnPerStitch > 0) || !(stitches > 0)) {
-    note.textContent = "";
-    return;
-  }
-
-  const start = castOnPerStitch * stitches;
-  const bindOff = (allowancePerStitch - castOnPerStitch) * stitches;
-
-  // Per stitch in the box's own unit, totals in metres — the same split the
-  // turning note uses, because a few centimetres per stitch and a few metres
-  // over a fabric are different sizes of thing.
-  let text = "Casting on " + stitches + " stitches takes " +
-    fromMetres(castOnPerStitch, unit).toFixed(2) + " " + unit + " each, " +
-    start.toFixed(2) + " m in all.";
-
-  if (bindOff > 0) {
-    text += " Binding off adds " + bindOff.toFixed(2) + " m at the far end, " +
-      "which changes the total but moves nothing.";
-  }
-
-  note.textContent = text;
+// The bind-off box borrows the dropdown on the row above it, so it needs
+// telling what unit it is in rather than sitting there as a bare number.
+function updateBindOffTag() {
+  document.getElementById("bindOffMeasuredTag").textContent = castOnUnitInput.value;
 }
 
 function templateActive() {
@@ -563,7 +535,7 @@ function draw() {
   // Knitted in the round the fabric is a tube, so its width measurement is
   // the way round it, not the way across it.
   updateTurningNote(effective.turnMetres, rows);
-  updateCastOnNote(effective.castOnMetres, effective.endAllowanceMetres, stitches);
+  updateBindOffTag();
 
   const gauge = gaugeMm();
   const size = fabricSize(stitches, rows, gauge.stitchWidth, gauge.rowHeight);
