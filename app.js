@@ -196,10 +196,10 @@ function turningActive() {
 
 // Yarn per stitch spent casting on, in metres.
 //
-// Doesn't move the pattern: the picked start point is where the first
-// stitch is cast on, not where the ball was before casting on began, so
-// cast-on yarn is a cost to the total but not a phase shift. Both ends
-// together are what the fabric costs.
+// It comes off the ball before a single row is knitted, so it does move the
+// pattern — row 0 begins a whole cast-on further into the sequence. What it
+// no longer moves is the cast-on itself, which starts where the knitter said
+// the yarn was picked up. Both ends together are what the fabric costs.
 //
 // Neither hides behind a section: every fabric is cast on and bound off, so
 // there is nothing here to switch on or off — only figures to improve.

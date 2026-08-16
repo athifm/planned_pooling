@@ -82,7 +82,13 @@ const DEFAULT_SETTINGS = {
   // Not optional the way counting turns is — every fabric is cast on and bound
   // off, so there is no switch here, only how much each costs. They share a
   // unit, being the same kind of measurement side by side.
-  castOnMeasured: 2.5,
+  //
+  // Casting on starts level with a knit stitch, not at some guessed fraction
+  // of one. A cast-on that ate half what knitting does would pack twice as
+  // many stitches into a band, so the cast-on row's colours came out at twice
+  // the width of the fabric's — which reads as a bug rather than as the
+  // untested guess it was. Measure it in calibration to do better.
+  castOnMeasured: 5,
   bindOffMeasured: 1.5,
   castOnUnit: "cm",
 
