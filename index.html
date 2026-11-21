@@ -4,10 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Planned Pooling</title>
+
+  <!-- Runs before first paint, so a knitter on the dark theme never sees a
+       white flash. Falls back to the companion app's key: the two apps share
+       an origin, so a choice made in one is already in force here. -->
+  <script>
+    try {
+      var t = localStorage.getItem("plannedPooling.theme")
+           || localStorage.getItem("circularYokeDesign.theme") || "auto";
+      if (t !== "auto") document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage off: Auto */ }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Planned Pooling</h1>
+  <div class="titleBar">
+    <h1>Planned Pooling</h1>
+    <button type="button" id="themeButton" aria-live="polite">Auto</button>
+  </div>
 
   <div class="page">
   <div class="fabricSide">

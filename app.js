@@ -3,6 +3,49 @@
 // The layers below know nothing about the page; this file is the only
 // place that touches both.
 
+// Theme. Auto follows the system; Light and Dark override it. The choice is
+// read by an inline script in <head> before first paint, so there is no flash
+// of the wrong theme — this file only handles changing it afterwards.
+//
+// It is written to the companion app's key as well, deliberately: both apps
+// sit on one origin, so a knitter who picks Dark in one should find it
+// already chosen in the other.
+const THEME_KEY = "plannedPooling.theme";
+const SHARED_THEME_KEY = "circularYokeDesign.theme";
+const THEMES = ["auto", "light", "dark"];
+const themeButton = document.getElementById("themeButton");
+
+function storedTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY)
+        || localStorage.getItem(SHARED_THEME_KEY)
+        || "auto";
+  } catch (e) {
+    // Storage off. Auto is the one choice that needs no memory.
+    return "auto";
+  }
+}
+
+function applyTheme(theme) {
+  // Auto is the absence of a choice, not a third value to match on, so the
+  // attribute comes off entirely and the media query decides.
+  if (theme === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+
+  themeButton.textContent = theme[0].toUpperCase() + theme.slice(1);
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(SHARED_THEME_KEY, theme);
+  } catch (e) { /* storage off: the choice lasts this visit only */ }
+}
+
+themeButton.addEventListener("click", function () {
+  const next = THEMES[(THEMES.indexOf(storedTheme()) + 1) % THEMES.length];
+  applyTheme(next);
+});
+
+applyTheme(storedTheme());
+
 const zoomInput       = document.getElementById("zoom");
 const stitchesInput   = document.getElementById("stitches");
 const rowsInput       = document.getElementById("rows");

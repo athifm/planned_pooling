@@ -1,5 +1,98 @@
+/* Design tokens. Taken from the Circular Yoke Sweater Designer's
+   DESIGN-PHILOSOPHY.md so the two apps read as one product. Names are by role
+   (--c-surface, not --c-white) so a value can change without the name turning
+   into a lie.
+
+   --ff-* and --c-paper are this app's own additions. The yoke app has no
+   pattern notation to set in monospace, and nothing quite like a fabric whose
+   colours are the knitter's own data. Everything else is the shared set,
+   unchanged. */
+:root {
+  --c-ink: #2a2723;            /* body text, warm near-black */
+  --c-ink-muted: #6b665d;      /* hints, notes, secondary text */
+  --c-bg: #f7f5f0;             /* page behind the panels: warm off-white */
+  --c-surface: #ffffff;        /* panels, fields */
+  --c-surface-2: #f3f0ea;      /* hovered rows, disabled areas */
+  --c-line: #e8e4dc;           /* soft dividers and card borders */
+  --c-line-strong: #d6d1c6;
+  --c-line-control: #968f83;   /* field and button outlines: 3:1 or more */
+  --c-accent: #854287;         /* berry */
+  --c-accent-strong: #6d3470;  /* hover, pressed */
+  --c-accent-soft: #f6eef6;    /* selected row, current entry */
+  --c-on-accent: #ffffff;
+  --c-danger: #b3261e;  --c-danger-soft: #fff5f6;
+  --c-success: #0a7a4a;
+  --c-tooltip: #2b2f36;
+
+  /* The fabric is an artboard: the colours in it are the knitter's design
+     data, not chrome, so it stays light in both themes. */
+  --c-paper: #ffffff;
+
+  --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-md: 0.875rem; --fs-base: 1rem; --fs-lg: 1.25rem;
+  --r-control: 8px;  --r-panel: 12px;
+  --shadow-card: 0 1px 2px rgb(60 50 30 / 6%), 0 2px 8px rgb(60 50 30 / 5%);
+  --shadow-pop:  0 6px 20px rgb(60 50 30 / 12%), 0 2px 6px rgb(60 50 30 / 8%);
+  --sp-1: 0.25rem; --sp-2: 0.5rem; --sp-3: 0.75rem; --sp-4: 1rem; --sp-5: 1.5rem;
+
+  --ff-sans: "Inter", system-ui, sans-serif;
+  --ff-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+/* Dark. The same names with different values, written out twice because
+   there is no build step to share them: once for Auto following the system,
+   once for a deliberate choice. Cards go lighter than the page and lose their
+   shadow — a shadow on a dark ground reads as grime rather than lift. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-ink: #e6e6e3;
+    --c-ink-muted: #a8a8a3;
+    --c-bg: #16171a;
+    --c-surface: #1f2125;
+    --c-surface-2: #2a2c31;
+    --c-line: #3a3d43;
+    --c-line-strong: #4a4e55;
+    --c-line-control: #7c8088;
+    --c-accent: #d59ad6;
+    --c-accent-strong: #e6b8e7;
+    --c-accent-soft: #3a2639;
+    --c-on-accent: #16171a;
+    --c-danger: #ff8a96;  --c-danger-soft: #3a1d22;
+    --c-success: #4ade80;
+    --c-tooltip: #3a3d43;
+    --shadow-card: none;
+    --shadow-pop: 0 8px 24px rgb(0 0 0 / 45%);
+  }
+}
+
+:root[data-theme="dark"] {
+  --c-ink: #e6e6e3;
+  --c-ink-muted: #a8a8a3;
+  --c-bg: #16171a;
+  --c-surface: #1f2125;
+  --c-surface-2: #2a2c31;
+  --c-line: #3a3d43;
+  --c-line-strong: #4a4e55;
+  --c-line-control: #7c8088;
+  --c-accent: #d59ad6;
+  --c-accent-strong: #e6b8e7;
+  --c-accent-soft: #3a2639;
+  --c-on-accent: #16171a;
+  --c-danger: #ff8a96;  --c-danger-soft: #3a1d22;
+  --c-success: #4ade80;
+  --c-tooltip: #3a3d43;
+  --shadow-card: none;
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+/* Stands in for the app bar until the File actions arrive and it becomes one. */
+.titleBar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
 body {
-  font-family: system-ui, sans-serif;
+  font-family: var(--ff-sans);
   margin: 1rem;
   color: #222;
 }
