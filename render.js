@@ -109,6 +109,10 @@ function drawSeamMarker(x, scale) {
 
   // Solid white underneath, black dashes over it, so the marker reads
   // whatever colors the fabric happens to be.
+  //
+  // Not themed, and not an oversight: everything drawn here sits on the
+  // artboard, which is light in both themes (--c-paper). A marker that
+  // followed the theme would turn near-white on near-white in dark mode.
   ctx.beginPath();
   ctx.moveTo(x, 0);
   ctx.lineTo(x, canvas.height);

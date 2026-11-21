@@ -205,8 +205,14 @@ h1 {
   width: fit-content;
 }
 
+/* The artboard. It holds the knitter's own colours, so it stays light in both
+   themes -- a dark fabric ground would recolour their design by sitting behind
+   it. The canvas clears to transparent, so this is what shows through wherever
+   the drawing does not reach: the zoomed-out surround, and the band above the
+   cast-on row. */
 #canvasWrap {
   overflow: hidden;
+  background: var(--c-paper);
   border: 1px solid var(--c-line-control);
   min-width: 24px;
   min-height: 24px;
