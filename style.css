@@ -114,7 +114,7 @@ body {
   /* Anchors the scale rather than leaning on the browser's 16px default, so
      --fs-base is a step like the rest and not an implied one. */
   font-size: var(--fs-base);
-  margin: 1rem;
+  margin: var(--sp-4);
   color: var(--c-ink);
   background: var(--c-bg);
 }
@@ -135,7 +135,7 @@ h1 {
      stretch the whole column — and the column would jump about as panels
      appear and disappear with the mode. The splitter overrides the variable. */
   grid-template-columns: var(--controls-width, 28rem) auto minmax(0, 1fr);
-  gap: 1rem;
+  gap: var(--sp-4);
   align-items: start;
 }
 
@@ -147,7 +147,7 @@ h1 {
   align-self: stretch;
   width: 9px;
   min-height: 6rem;
-  border-radius: 5px;
+  border-radius: var(--r-control);
   background: var(--c-line);
   cursor: col-resize;
   touch-action: none;
@@ -175,10 +175,10 @@ h1 {
     "top     ."
     "canvas  right";
   grid-template-columns: auto auto;
-  gap: 0.75rem;
+  gap: var(--sp-3);
   justify-content: start;
   align-items: start;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--sp-4);
 }
 
 /* Each control is centred on the edge it governs: stitches across the top,
@@ -197,7 +197,7 @@ h1 {
 .dimension label {
   font-size: var(--fs-md);
   color: var(--c-ink-muted);
-  margin-right: 0.4rem;
+  margin-right: var(--sp-2);
 }
 
 /* The area is only as big as the canvas box; the handles hang off its
@@ -227,7 +227,7 @@ h1 {
 .handle {
   position: absolute;
   background: var(--c-line-strong);
-  border-radius: 2px;
+  border-radius: var(--r-control);
   touch-action: none;
 }
 
@@ -261,14 +261,18 @@ h1 {
   display: none;
   writing-mode: vertical-rl;
   transform: translateY(-50%) rotate(180deg);
-  padding: 4px 6px;
-  border-radius: 4px;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-control);
   background: var(--c-paper-veil);
   font-size: var(--fs-sm);
   color: var(--c-paper-ink);
   white-space: nowrap;
 }
 
+/* Off the spacing scale on purpose, like the 3.2rem cell widths: this gutter
+   is sized to hold a rotated "Seam" caption, so it is a content fit rather
+   than rhythm. The fade-row clearances below are the same kind of exception --
+   they hold the pin and its label. */
 .canvasArea.hasSeam {
   margin: 0 3.25rem;
 }
@@ -279,13 +283,13 @@ h1 {
 
 .seamLabelLeft {
   right: 100%;
-  margin-right: 0.6rem;
+  margin-right: var(--sp-2);
 }
 
 /* Further out on this side, to clear the resize grip. */
 .seamLabelRight {
   left: 100%;
-  margin-left: 1.4rem;
+  margin-left: var(--sp-5);
 }
 
 .handleCorner {
@@ -311,7 +315,7 @@ h1 {
 }
 
 #yarnReadout {
-  margin-top: 0.2rem;
+  margin-top: var(--sp-1);
 }
 
 /* A colour in the middle of a sentence, because the instruction gets followed
@@ -321,7 +325,7 @@ h1 {
   width: 1.6rem;
   height: 0.85rem;
   border: 1px solid var(--c-line-control);
-  border-radius: 2px;
+  border-radius: var(--r-control);
   vertical-align: -0.1rem;
 }
 
@@ -333,7 +337,7 @@ h1 {
 .panel {
   grid-area: controls;
   display: grid;
-  gap: 1.3rem;
+  gap: var(--sp-5);
   align-content: start;
   /* Grid items refuse to shrink below their content by default; this lets the
      panels actually honour the column width instead of overflowing it. */
@@ -369,7 +373,7 @@ h1 {
   }
 
   body.fades .colorRow {
-    margin-bottom: 1.1rem;
+    margin-bottom: var(--sp-4);
   }
 
   body.fades #colorRows {
@@ -394,8 +398,8 @@ h1 {
 
 fieldset {
   border: 1px solid var(--c-line);
-  border-radius: 4px;
-  padding: 0.9rem 1rem 1rem;
+  border-radius: var(--r-panel);
+  padding: var(--sp-4);
   /* Browsers give fieldset min-inline-size: min-content in their own
      stylesheet, so it refuses to shrink into its grid column and spills
      sideways over the fabric. This is the standard override. */
@@ -416,8 +420,8 @@ fieldset {
 
 .panelSection {
   border: 1px solid var(--c-line);
-  border-radius: 4px;
-  padding: 0.9rem 1rem 1rem;
+  border-radius: var(--r-panel);
+  padding: var(--sp-4);
   min-inline-size: 0;
   min-width: 0;
 }
@@ -437,13 +441,13 @@ fieldset {
 
 .panelSection[open] > summary,
 .subSection[open] > summary {
-  margin-bottom: 0.7rem;
+  margin-bottom: var(--sp-3);
 }
 
 .subSection {
-  margin-top: 0.7rem;
+  margin-top: var(--sp-3);
   border-top: 1px solid var(--c-line);
-  padding-top: 0.6rem;
+  padding-top: var(--sp-2);
 }
 
 /* An open section is doing something to the fabric, and that is worth seeing
@@ -464,7 +468,7 @@ fieldset {
 legend {
   font-size: var(--fs-md);
   color: var(--c-ink-muted);
-  padding: 0 0.3rem;
+  padding: 0 var(--sp-1);
 }
 
 label {
@@ -473,7 +477,7 @@ label {
 
 input[type="number"] {
   width: 6rem;
-  padding: 0.2rem 0.3rem;
+  padding: var(--sp-1);
 }
 
 input[type="color"] {
@@ -484,9 +488,9 @@ input[type="color"] {
 }
 
 .swatch {
-  margin-top: 0.7rem;
+  margin-top: var(--sp-3);
   border-top: 1px solid var(--c-line);
-  padding-top: 0.6rem;
+  padding-top: var(--sp-2);
 }
 
 .swatch summary {
@@ -501,9 +505,9 @@ input[type="color"] {
 .fields {
   display: grid;
   grid-template-columns: max-content max-content;
-  gap: 0.6rem 0.9rem;
+  gap: var(--sp-2) var(--sp-3);
   align-items: center;
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--sp-3);
 }
 
 /* Four columns, so each measurement sits beside the count it goes with:
@@ -515,12 +519,12 @@ input[type="color"] {
 .hint {
   font-size: var(--fs-sm);
   color: var(--c-ink-muted);
-  margin: 0.4rem 0;
+  margin: var(--sp-2) 0;
 }
 
 .choice {
   display: block;
-  margin: 0.35rem 0;
+  margin: var(--sp-1) 0;
 }
 
 /* One figure for the whole fabric, replaced by the table when that is opened.
@@ -559,7 +563,7 @@ body.customStitch .customOnly {
 .rowChoice {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 
@@ -588,9 +592,9 @@ body.calMinimal .targetOnly {
 .typeHeader {
   display: grid;
   grid-template-columns: 7rem 3rem 5.5rem max-content;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--sp-1);
 }
 
 /* Strip, then the repeat marks and remove together on the right. The strip
@@ -601,9 +605,9 @@ body.calMinimal .targetOnly {
 .templateRow {
   display: flex;
   align-items: flex-end;
-  gap: 0.6rem;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.45rem;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  padding-bottom: var(--sp-2);
   border-bottom: 1px dashed var(--c-line);
 }
 
@@ -612,7 +616,7 @@ body.calMinimal .targetOnly {
 .rowTotal {
   flex: 0 0 auto;
   min-width: 2.6rem;
-  padding-bottom: 0.3rem;
+  padding-bottom: var(--sp-1);
   text-align: right;
   font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
@@ -634,7 +638,7 @@ body.calMinimal .targetOnly {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 /* Counter strip and cells scroll together so they never drift apart. */
@@ -642,19 +646,19 @@ body.calMinimal .targetOnly {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
-  padding-bottom: 0.2rem;
+  padding-bottom: var(--sp-1);
 }
 
 .countStrip,
 .cellStrip {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.3rem;
+  gap: var(--sp-1);
   width: max-content;
 }
 
 .countStrip {
-  margin-bottom: 0.15rem;
+  margin-bottom: var(--sp-1);
 }
 
 /* Right-aligned, because the figure is the total *after* this cell — so it
@@ -663,7 +667,7 @@ body.calMinimal .targetOnly {
   width: 3.2rem;
   flex: 0 0 3.2rem;
   text-align: right;
-  padding-right: 0.35rem;
+  padding-right: var(--sp-1);
   font-size: var(--fs-xs);
   color: var(--c-ink-muted);
   font-variant-numeric: tabular-nums;
@@ -682,7 +686,7 @@ body.calMinimal .targetOnly {
 .templateCell {
   width: 3.2rem;
   flex: 0 0 3.2rem;
-  padding: 0.2rem 0.3rem;
+  padding: var(--sp-1);
   font-family: var(--ff-mono);
   /* A stack ending in the generic monospace keyword makes browsers apply
      their own monospace default of about 13.3px instead of inheriting, which
@@ -697,9 +701,9 @@ body.calMinimal .targetOnly {
   display: none;
   width: 3.2rem;
   flex: 0 0 3.2rem;
-  padding: 0.2rem 0.3rem;
+  padding: var(--sp-1);
   border: 1px dashed var(--c-accent);
-  border-radius: 3px;
+  border-radius: var(--r-control);
   background: var(--c-accent-soft);
   color: var(--c-accent);
   font-family: var(--ff-mono);
@@ -714,7 +718,7 @@ body.turning .turnChip {
 .repeatMarks {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   white-space: nowrap;
 }
 
@@ -733,7 +737,7 @@ body.turning .turnChip {
 }
 
 .repeatMark input {
-  margin-right: 0.15rem;
+  margin-right: var(--sp-1);
 }
 
 .repeatCountLabel {
@@ -743,7 +747,7 @@ body.turning .turnChip {
 
 .repeatCount {
   width: 3.2rem;
-  margin-left: 0.2rem;
+  margin-left: var(--sp-1);
 }
 
 /* A template fixes the fabric's size in both directions, so none of the
@@ -772,7 +776,7 @@ input[readonly] {
 }
 
 .typeChoice {
-  margin-top: 0.8rem;
+  margin-top: var(--sp-3);
 }
 
 /* The calibration list mirrors the stitch type table above it, so it takes the
@@ -781,9 +785,9 @@ input[readonly] {
 .calHeader {
   display: grid;
   grid-template-columns: 7rem 4rem max-content;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--sp-1);
 }
 
 .calHeader {
@@ -807,19 +811,19 @@ input[readonly] {
 
 .calLabel {
   font-size: var(--fs-md);
-  margin: 0.9rem 0 0.2rem;
+  margin: var(--sp-3) 0 var(--sp-1);
 }
 
 /* Numbered, because this is a list of things to make and the numbers are what
    gets ticked off against the pile of finished swatches. */
 .swatchList {
-  margin: 0.8rem 0 0.4rem;
-  padding-left: 1.4rem;
+  margin: var(--sp-3) 0 var(--sp-2);
+  padding-left: var(--sp-5);
   font-size: var(--fs-md);
 }
 
 .swatchList li {
-  margin-bottom: 0.3rem;
+  margin-bottom: var(--sp-1);
 }
 
 .swatchCount {
@@ -831,10 +835,10 @@ input[readonly] {
 .precisionTable {
   display: grid;
   grid-template-columns: max-content max-content max-content;
-  gap: 0.25rem 0.9rem;
+  gap: var(--sp-1) var(--sp-3);
   font-size: var(--fs-sm);
   color: var(--c-ink-muted);
-  margin: 0.6rem 0;
+  margin: var(--sp-2) 0;
 }
 
 .precisionTable .short {
@@ -856,7 +860,7 @@ input[readonly] {
    than being squeezed into one column of it. */
 .problemNote {
   grid-column: 1 / -1;
-  margin: 0.2rem 0 0;
+  margin: var(--sp-1) 0 0;
   font-size: var(--fs-sm);
   color: var(--c-danger);
 }
@@ -866,11 +870,11 @@ input[readonly] {
   top: 0.5rem;
   left: 0.5rem;
   margin: 0;
-  padding: 0.3rem 0.6rem;
+  padding: var(--sp-1) var(--sp-2);
   font-size: var(--fs-sm);
   background: var(--c-danger);
   color: var(--c-on-danger);
-  border-radius: 3px;
+  border-radius: var(--r-control);
   /* Never in the way of a click on the fabric underneath. */
   pointer-events: none;
   display: none;
@@ -917,9 +921,9 @@ body.weighing .weightBlock {
 .weightHeader {
   display: grid;
   grid-template-columns: 6rem 6rem max-content;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--sp-1);
 }
 
 .weightHeader {
@@ -932,7 +936,7 @@ body.weighing .weightBlock {
 }
 
 .weightRow button {
-  padding: 0.1rem 0.4rem;
+  padding: var(--sp-1) var(--sp-2);
   font-size: var(--fs-xs);
 }
 
@@ -940,8 +944,8 @@ body.weighing .weightBlock {
    whole line to describe, and putting the box beside it would leave the
    numbers in a ragged column nobody can scan. */
 .measureRow {
-  margin-bottom: 0.55rem;
-  padding-bottom: 0.5rem;
+  margin-bottom: var(--sp-2);
+  padding-bottom: var(--sp-2);
   border-bottom: 1px dashed var(--c-line);
 }
 
@@ -951,13 +955,13 @@ body.weighing .weightBlock {
 
 .measureWhat {
   font-size: var(--fs-md);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--sp-1);
 }
 
 .measureEntry {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
 }
 
 .measureEntry input {
@@ -985,10 +989,10 @@ body.weighing .weightBlock {
 .solutionTable {
   display: grid;
   grid-template-columns: max-content max-content max-content;
-  gap: 0.25rem 0.9rem;
+  gap: var(--sp-1) var(--sp-3);
   font-size: var(--fs-md);
   color: var(--c-ink-muted);
-  margin: 0.8rem 0 0.5rem;
+  margin: var(--sp-3) 0 var(--sp-2);
 }
 
 .solutionValue {
@@ -1020,9 +1024,9 @@ body.solved #applyCalibration {
 .colorHeader {
   display: grid;
   grid-template-columns: 1.9rem 1.8rem max-content;
-  gap: 0.9rem;
+  gap: var(--sp-3);
   align-items: center;
-  margin-bottom: 0.55rem;
+  margin-bottom: var(--sp-2);
 }
 
 /* Band lengths are one or two digits, so the box is sized for that and scrolls
@@ -1030,7 +1034,7 @@ body.solved #applyCalibration {
    width and nobody nudges a tape measurement by 0.1 at a time. */
 .colorRow input[type="number"] {
   height: 1.6rem;
-  padding: 0.1rem 0.25rem;
+  padding: var(--sp-1);
 }
 
 .colorRow input[type="number"]::-webkit-outer-spin-button,
@@ -1047,7 +1051,7 @@ body.solved #applyCalibration {
 /* Row buttons carry a single short word and do not need the default size. */
 .colorRow button,
 .typeRow button {
-  padding: 0.1rem 0.4rem;
+  padding: var(--sp-1) var(--sp-2);
   font-size: var(--fs-xs);
 }
 
@@ -1095,7 +1099,7 @@ body.fades .colorHeader {
   height: 1.05rem;
   margin: 0;
   border: 1px solid var(--c-line-control);
-  border-radius: 3px;
+  border-radius: var(--r-control);
   cursor: ew-resize;
   /* The gradient itself is set per row in paintFadeTrack(). */
   background: var(--c-surface-2);
@@ -1203,7 +1207,7 @@ body.fades .colorHeader {
   width: 3.4rem;
   height: 1.4rem;
   transform: translateX(-50%);
-  padding: 0.05rem 0.15rem;
+  padding: var(--sp-1);
   font-size: var(--fs-xs);
   text-align: center;
 }
@@ -1243,7 +1247,7 @@ body.fades .fadeBlock {
 /* A value and its unit are one control, so they share one grid cell. */
 .withUnit {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   align-items: center;
 }
 
@@ -1252,7 +1256,7 @@ body.fades .fadeBlock {
 }
 
 button {
-  padding: 0.25rem 0.6rem;
+  padding: var(--sp-1) var(--sp-2);
   font: inherit;
 }
 
@@ -1266,7 +1270,7 @@ button {
       "fabric"
       "controls";
     grid-template-columns: 1fr;
-    gap: 1.25rem;
+    gap: var(--sp-4);
   }
 
   .fabricSide {
@@ -1292,6 +1296,6 @@ button {
   .fields,
   .fieldsSwatch {
     grid-template-columns: 1fr;
-    gap: 0.15rem;
+    gap: var(--sp-1);
   }
 }
