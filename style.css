@@ -21,18 +21,32 @@
   --c-accent-soft: #f6eef6;    /* selected row, current entry */
   --c-on-accent: #ffffff;
   --c-danger: #b3261e;  --c-danger-soft: #fff5f6;
+  /* The stale badge sets white text on saturated danger. That was going to stay
+     a literal, but danger inverts in dark mode -- white on #ff8a96 is about
+     2:1 -- so it needs a paired token like --c-on-accent, not an exception. */
+  --c-on-danger: #ffffff;
   --c-success: #0a7a4a;
   --c-tooltip: #2b2f36;
 
   /* The fabric is an artboard: the colours in it are the knitter's design
      data, not chrome, so it stays light in both themes. */
   --c-paper: #ffffff;
+  /* Seam captions sit on the fabric, so they take the artboard's colours and
+     are deliberately absent from the dark blocks below. --c-ink there would
+     flip to near-white and vanish into the veil. */
+  --c-paper-veil: rgb(255 255 255 / 72%);
+  --c-paper-ink: #2a2723;
 
   --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-md: 0.875rem; --fs-base: 1rem; --fs-lg: 1.25rem;
   --r-control: 8px;  --r-panel: 12px;
   --shadow-card: 0 1px 2px rgb(60 50 30 / 6%), 0 2px 8px rgb(60 50 30 / 5%);
   --shadow-pop:  0 6px 20px rgb(60 50 30 / 12%), 0 2px 6px rgb(60 50 30 / 8%);
   --sp-1: 0.25rem; --sp-2: 0.5rem; --sp-3: 0.75rem; --sp-4: 1rem; --sp-5: 1.5rem;
+
+  /* Without this the browser paints number spinners, select menus and
+     scrollbars light inside dark panels. It is a colour decision, so it
+     belongs with the colours. */
+  color-scheme: light;
 
   --ff-sans: "Inter", system-ui, sans-serif;
   --ff-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -57,10 +71,12 @@
     --c-accent-soft: #3a2639;
     --c-on-accent: #16171a;
     --c-danger: #ff8a96;  --c-danger-soft: #3a1d22;
+  --c-on-danger: #16171a;
     --c-success: #4ade80;
     --c-tooltip: #3a3d43;
     --shadow-card: none;
     --shadow-pop: 0 8px 24px rgb(0 0 0 / 45%);
+    color-scheme: dark;
   }
 }
 
@@ -78,10 +94,12 @@
   --c-accent-soft: #3a2639;
   --c-on-accent: #16171a;
   --c-danger: #ff8a96;  --c-danger-soft: #3a1d22;
+  --c-on-danger: #16171a;
   --c-success: #4ade80;
   --c-tooltip: #3a3d43;
   --shadow-card: none;
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 45%);
+  color-scheme: dark;
 }
 
 /* Stands in for the app bar until the File actions arrive and it becomes one. */
@@ -94,7 +112,8 @@
 body {
   font-family: var(--ff-sans);
   margin: 1rem;
-  color: #222;
+  color: var(--c-ink);
+  background: var(--c-bg);
 }
 
 h1 {
@@ -126,14 +145,14 @@ h1 {
   width: 9px;
   min-height: 6rem;
   border-radius: 5px;
-  background: #e3e3e3;
+  background: var(--c-line);
   cursor: col-resize;
   touch-action: none;
 }
 
 .splitter:hover,
 .splitter.dragging {
-  background: #b0b0b0;
+  background: var(--c-line-control);
 }
 
 .fabricSide {
@@ -174,7 +193,7 @@ h1 {
 
 .dimension label {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--c-ink-muted);
   margin-right: 0.4rem;
 }
 
@@ -188,7 +207,7 @@ h1 {
 
 #canvasWrap {
   overflow: hidden;
-  border: 1px solid #bbb;
+  border: 1px solid var(--c-line-control);
   min-width: 24px;
   min-height: 24px;
 }
@@ -198,13 +217,13 @@ h1 {
    scrolling the page instead of resizing. */
 .handle {
   position: absolute;
-  background: #c4c4c4;
+  background: var(--c-line-strong);
   border-radius: 2px;
   touch-action: none;
 }
 
 .handle:hover {
-  background: #8a8a8a;
+  background: var(--c-line-control);
 }
 
 .handleRight {
@@ -235,9 +254,9 @@ h1 {
   transform: translateY(-50%) rotate(180deg);
   padding: 4px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--c-paper-veil);
   font-size: 0.8rem;
-  color: #333;
+  color: var(--c-paper-ink);
   white-space: nowrap;
 }
 
@@ -265,7 +284,7 @@ h1 {
   bottom: -10px;
   width: 8px;
   height: 8px;
-  background: #8a8a8a;
+  background: var(--c-line-control);
   cursor: nwse-resize;
 }
 
@@ -279,7 +298,7 @@ h1 {
 #yarnReadout {
   margin: 0;
   font-size: 0.85rem;
-  color: #555;
+  color: var(--c-ink-muted);
 }
 
 #yarnReadout {
@@ -292,7 +311,7 @@ h1 {
   display: inline-block;
   width: 1.6rem;
   height: 0.85rem;
-  border: 1px solid #999;
+  border: 1px solid var(--c-line-control);
   border-radius: 2px;
   vertical-align: -0.1rem;
 }
@@ -365,7 +384,7 @@ h1 {
 }
 
 fieldset {
-  border: 1px solid #ddd;
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   padding: 0.9rem 1rem 1rem;
   /* Browsers give fieldset min-inline-size: min-content in their own
@@ -387,7 +406,7 @@ fieldset {
    not look half broken; a sub-section sits inside one. */
 
 .panelSection {
-  border: 1px solid #ddd;
+  border: 1px solid var(--c-line);
   border-radius: 4px;
   padding: 0.9rem 1rem 1rem;
   min-inline-size: 0;
@@ -398,13 +417,13 @@ fieldset {
 .subSection > summary {
   cursor: pointer;
   font-size: 0.9rem;
-  color: #345;
+  color: var(--c-ink);
 }
 
 .panelSection > summary {
   /* Reads as the legend it replaces. */
   font-size: 0.85rem;
-  color: #555;
+  color: var(--c-ink-muted);
 }
 
 .panelSection[open] > summary,
@@ -414,7 +433,7 @@ fieldset {
 
 .subSection {
   margin-top: 0.7rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--c-line);
   padding-top: 0.6rem;
 }
 
@@ -435,7 +454,7 @@ fieldset {
 
 legend {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--c-ink-muted);
   padding: 0 0.3rem;
 }
 
@@ -452,19 +471,19 @@ input[type="color"] {
   width: 1.9rem;
   height: 1.9rem;
   padding: 0;
-  border: 1px solid #bbb;
+  border: 1px solid var(--c-line-control);
 }
 
 .swatch {
   margin-top: 0.7rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--c-line);
   padding-top: 0.6rem;
 }
 
 .swatch summary {
   cursor: pointer;
   font-size: 0.9rem;
-  color: #345;
+  color: var(--c-ink);
 }
 
 /* Label/input pairs in two columns, so nothing wraps mid-pair.
@@ -486,7 +505,7 @@ input[type="color"] {
 
 .hint {
   font-size: 0.82rem;
-  color: #666;
+  color: var(--c-ink-muted);
   margin: 0.4rem 0;
 }
 
@@ -576,7 +595,7 @@ body.calMinimal .targetOnly {
   gap: 0.6rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.45rem;
-  border-bottom: 1px dashed #e8e8e8;
+  border-bottom: 1px dashed var(--c-line);
 }
 
 /* Outside the scroller, so it stays visible however far the strip is
@@ -588,11 +607,11 @@ body.calMinimal .targetOnly {
   text-align: right;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
-  color: #445;
+  color: var(--c-ink);
 }
 
 .rowTotal.bad {
-  color: #b8322b;
+  color: var(--c-danger);
   font-weight: 700;
 }
 
@@ -637,14 +656,17 @@ body.calMinimal .targetOnly {
   text-align: right;
   padding-right: 0.35rem;
   font-size: 0.72rem;
-  color: #567;
+  color: var(--c-ink-muted);
   font-variant-numeric: tabular-nums;
 }
 
 /* Inside a group the figure counts the group, not the fabric — dimmed so it
    is not mistaken for a running total. */
 .countCell.inGroup {
-  color: #aab;
+  color: var(--c-ink-muted);
+  /* Dimmed below muted rather than given a colour of its own: the italic alone
+     is too quiet to say "this counts the group, not the fabric". */
+  opacity: 0.65;
   font-style: italic;
 }
 
@@ -662,10 +684,10 @@ body.calMinimal .targetOnly {
   width: 3.2rem;
   flex: 0 0 3.2rem;
   padding: 0.2rem 0.3rem;
-  border: 1px dashed #c9b7c6;
+  border: 1px dashed var(--c-accent);
   border-radius: 3px;
-  background: #f7f1f6;
-  color: #8a6d85;
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   font-size: 0.85rem;
   text-align: center;
@@ -684,12 +706,15 @@ body.turning .turnChip {
 
 .repeatMark {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 /* "end" with no repeat open above it. */
 .repeatMark.disabled {
-  color: #bbb;
+  color: var(--c-ink-muted);
+  /* Two text tiers only, so the "nothing to end" state is carried by dimming
+     the muted tone rather than by a third colour. Matches .calCheck.disabled. */
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -699,7 +724,7 @@ body.turning .turnChip {
 
 .repeatCountLabel {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 .repeatCount {
@@ -714,18 +739,18 @@ body.templated .handle {
 }
 
 .templateCell:focus {
-  outline: 2px solid #4a7;
+  outline: 2px solid var(--c-accent);
   outline-offset: 1px;
 }
 
 input[readonly] {
-  background: #f2f2f2;
-  color: #555;
+  background: var(--c-surface-2);
+  color: var(--c-ink-muted);
 }
 
 .typeHeader {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 .typeRow input {
@@ -749,7 +774,7 @@ input[readonly] {
 
 .calHeader {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 .calTypeName {
@@ -794,12 +819,12 @@ input[readonly] {
   grid-template-columns: max-content max-content max-content;
   gap: 0.25rem 0.9rem;
   font-size: 0.82rem;
-  color: #666;
+  color: var(--c-ink-muted);
   margin: 0.6rem 0;
 }
 
 .precisionTable .short {
-  color: #b3261e;
+  color: var(--c-danger);
 }
 
 /* --- Problems ---------------------------------------------------------------
@@ -808,9 +833,9 @@ input[readonly] {
    wrong, which is the half you need when the panel is scrolled elsewhere. */
 
 .problem {
-  outline: 2px solid #b3261e;
+  outline: 2px solid var(--c-danger);
   outline-offset: 1px;
-  background: #fdf2f1;
+  background: var(--c-danger-soft);
 }
 
 /* Spans whatever grid it lands in, so it reads as a line under the row rather
@@ -819,7 +844,7 @@ input[readonly] {
   grid-column: 1 / -1;
   margin: 0.2rem 0 0;
   font-size: 0.8rem;
-  color: #b3261e;
+  color: var(--c-danger);
 }
 
 .staleBadge {
@@ -829,8 +854,8 @@ input[readonly] {
   margin: 0;
   padding: 0.3rem 0.6rem;
   font-size: 0.82rem;
-  background: #b3261e;
-  color: #fff;
+  background: var(--c-danger);
+  color: var(--c-on-danger);
   border-radius: 3px;
   /* Never in the way of a click on the fabric underneath. */
   pointer-events: none;
@@ -885,7 +910,7 @@ body.weighing .weightBlock {
 
 .weightHeader {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 .weightRow input {
@@ -903,7 +928,7 @@ body.weighing .weightBlock {
 .measureRow {
   margin-bottom: 0.55rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px dashed #e8e8e8;
+  border-bottom: 1px dashed var(--c-line);
 }
 
 .measureRow:last-child {
@@ -927,18 +952,18 @@ body.weighing .weightBlock {
 
 .unitTag {
   font-size: 0.82rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 /* What the solver will be handed, as opposed to what was typed. Quiet, because
    it is a check rather than an instruction. */
 .measureNet {
   font-size: 0.8rem;
-  color: #777;
+  color: var(--c-ink-muted);
 }
 
 .measureNet.bad {
-  color: #b3261e;
+  color: var(--c-danger);
 }
 
 /* The answer. Values in a column so they can be read against each other, and
@@ -948,18 +973,18 @@ body.weighing .weightBlock {
   grid-template-columns: max-content max-content max-content;
   gap: 0.25rem 0.9rem;
   font-size: 0.85rem;
-  color: #555;
+  color: var(--c-ink-muted);
   margin: 0.8rem 0 0.5rem;
 }
 
 .solutionValue {
   font-weight: 600;
-  color: #222;
+  color: var(--c-ink);
 }
 
 .solutionTable .short,
 .hint.bad {
-  color: #b3261e;
+  color: var(--c-danger);
 }
 
 /* Applying is the deliberate act, so the button is only there when there is
@@ -1055,11 +1080,11 @@ body.fades .colorHeader {
   width: 100%;
   height: 1.05rem;
   margin: 0;
-  border: 1px solid #b4b4b4;
+  border: 1px solid var(--c-line-control);
   border-radius: 3px;
   cursor: ew-resize;
   /* The gradient itself is set per row in paintFadeTrack(). */
-  background: #ddd;
+  background: var(--c-surface-2);
 }
 
 .fadeSlider::-webkit-slider-runnable-track {
@@ -1079,7 +1104,12 @@ body.fades .colorHeader {
 /* A grabbable head with a hairline down its middle: wide enough to catch with
    a mouse or thumb, while the line still says exactly where the fade begins.
    Width must stay in step with FADE_THUMB_PX in controls.js, which uses it to
-   place the floating label. */
+   place the floating label.
+
+   The two colours here stay literal on purpose. The thumb sits on the yarn
+   gradient, so it needs contrast against an arbitrary colour the knitter
+   picked -- not against app chrome. A token that follows the theme would
+   disappear over the wrong yarn in one theme or the other. */
 .fadeSlider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
@@ -1121,7 +1151,7 @@ body.fades .colorHeader {
 }
 
 .fadeSlider:focus-visible {
-  outline: 2px solid #4a7;
+  outline: 2px solid var(--c-accent);
   outline-offset: 2px;
 }
 
@@ -1139,6 +1169,10 @@ body.fades .colorHeader {
      The track underneath keeps its native dragging as well. */
   touch-action: none;
   cursor: grab;
+  /* Literal too, and for a duller reason than the thumb's: a custom property
+     cannot be interpolated into a url(), so the fill has to be written into
+     the data URI. Replacing this with clip-path over var(--c-accent) would
+     tokenize it; not worth the shape risk in a colour sweep. */
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 20'%3E%3Cpath d='M2 0h10a2 2 0 0 1 2 2v9l-7 9-7-9V2a2 2 0 0 1 2-2z' fill='%233b7dd8'/%3E%3C/svg%3E")
     center / 14px 20px no-repeat;
@@ -1180,7 +1214,7 @@ body.fades .fadeBlock {
 
 .colorHeader {
   font-size: 0.78rem;
-  color: #666;
+  color: var(--c-ink-muted);
 }
 
 /* Columns are sized to the controls, not the headings, so the gaps between
