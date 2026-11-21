@@ -396,7 +396,12 @@ h1 {
   }
 }
 
+/* A top-level panel is a card: surface, hairline, panel radius, card shadow.
+   In dark --shadow-card is none, so the card is carried by the surface sitting
+   lighter than the page instead -- a shadow on a dark ground reads as grime. */
 fieldset {
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
   border: 1px solid var(--c-line);
   border-radius: var(--r-panel);
   padding: var(--sp-4);
@@ -419,6 +424,8 @@ fieldset {
    not look half broken; a sub-section sits inside one. */
 
 .panelSection {
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
   border: 1px solid var(--c-line);
   border-radius: var(--r-panel);
   padding: var(--sp-4);
@@ -444,6 +451,8 @@ fieldset {
   margin-bottom: var(--sp-3);
 }
 
+/* A group inside a card gets a line and a heading, never another card.
+   Nesting cards is what turns a settings panel into a stack of boxes. */
 .subSection {
   margin-top: var(--sp-3);
   border-top: 1px solid var(--c-line);
