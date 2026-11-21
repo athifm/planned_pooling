@@ -333,10 +333,16 @@
         </div>
         <p class="hint" id="turningNote"></p>
       </details>
-    </fieldset>
 
-    <fieldset id="castOn">
-      <legend>Cast on</legend>
+      <!-- Cast on and bind off are per-stitch costs exactly like the ones
+           above, spent at the fabric's two edges -- the hint below was already
+           saying so while sitting in a panel of its own.
+
+           A group, not a disclosure: these always apply, and a control that is
+           in force has to stay visible. Nesting it in a disclosure would hide
+           a figure that still counts. -->
+      <div class="group" id="castOn">
+        <h3 class="groupHeading">Cast on and bind off</h3>
 
       <div class="fields">
         <label for="castOnMeasured">Casting on, per stitch</label>
@@ -362,6 +368,7 @@
         Rough starting points, like the stitch figures. Calibration replaces
         both.
       </p>
+      </div>
     </fieldset>
 
     <details class="panelSection" id="calibration" data-section="calibration">

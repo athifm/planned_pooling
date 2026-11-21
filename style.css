@@ -452,7 +452,24 @@ fieldset {
 }
 
 /* A group inside a card gets a line and a heading, never another card.
-   Nesting cards is what turns a settings panel into a stack of boxes. */
+   Nesting cards is what turns a settings panel into a stack of boxes.
+
+   .group is the same treatment without the disclosure: for a block that
+   always applies, so it has to stay visible. .subSection is for a block the
+   knitter can put away, where closed genuinely means not counted. */
+.group {
+  margin-top: var(--sp-3);
+  border-top: 1px solid var(--c-line);
+  padding-top: var(--sp-2);
+}
+
+.groupHeading {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
 .subSection {
   margin-top: var(--sp-3);
   border-top: 1px solid var(--c-line);
