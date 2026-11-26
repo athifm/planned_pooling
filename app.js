@@ -64,7 +64,6 @@ const tailInput       = document.getElementById("tail");
 const staleBadge      = document.getElementById("staleBadge");
 const canvasWrap      = document.getElementById("canvasWrap");
 const canvasArea      = document.querySelector(".canvasArea");
-const constructionSet = document.getElementById("construction");
 const castOnMeasuredInput = document.getElementById("castOnMeasured");
 const bindOffMeasuredInput = document.getElementById("bindOffMeasured");
 const castOnUnitInput = document.getElementById("castOnUnit");

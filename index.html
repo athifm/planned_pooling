@@ -161,8 +161,31 @@
       </details>
     </fieldset>
 
+    <!-- Shape first, then scale. Whether the fabric turns decides what the
+         gauge figures are describing, so construction is not a question of
+         its own -- it is the first half of this one.
+
+         The card is "Fabric" rather than "Gauge" because the legend has to
+         cover what is under it. Gauge survives as the heading of the group
+         that actually holds the gauge figures, so the word a knitter looks
+         for is still on screen. -->
     <fieldset>
-      <legend>Gauge</legend>
+      <legend>Fabric</legend>
+
+      <div id="construction">
+        <label class="choice">
+          <input type="radio" name="construction" value="flat" checked>
+          Flat — knitted back and forth, every other row reversed
+        </label>
+        <label class="choice">
+          <input type="radio" name="construction" value="circular">
+          Circular — knitted in the round, a continuous spiral
+        </label>
+      </div>
+
+      <div class="group">
+        <h3 class="groupHeading">Gauge</h3>
+
       <div class="fields">
         <label for="gaugeUnit">Measured in</label>
         <select id="gaugeUnit">
@@ -204,19 +227,7 @@
         <button type="button" id="applySwatch">Use this gauge</button>
         <p class="hint" id="swatchResult"></p>
       </details>
-    </fieldset>
-
-    <fieldset id="construction">
-      <legend>Construction</legend>
-      <label class="choice">
-        <input type="radio" name="construction" value="flat" checked>
-        Flat — knitted back and forth, every other row reversed
-      </label>
-      <label class="choice">
-        <input type="radio" name="construction" value="circular">
-        Circular — knitted in the round, a continuous spiral
-      </label>
-
+      </div>
     </fieldset>
 
     <!-- One panel, in the order the questions actually come: what is in a row,
