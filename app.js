@@ -1278,7 +1278,17 @@ function frozenUnknowns() { return frozen.unknowns; }
 function setFrozen(swatches, unknowns, values) {
   frozen = { swatches: swatches, unknowns: unknowns };
   setMeasureRows(swatches, values);
-  document.body.classList.toggle("prescribed", swatches.length > 0);
+  const prescribed = swatches.length > 0;
+  document.body.classList.toggle("prescribed", prescribed);
+
+  // The measurement boxes live inside the calibration card now, so a closed
+  // card would hide them. Opening it on the way in means the only way to put
+  // them away is to decide to, which is the one case where losing sight of
+  // them is not a surprise.
+  if (prescribed) {
+    const card = document.getElementById("calibration");
+    if (card) card.open = true;
+  }
   updateCalUnitTags();
   updateMeasurementReadout();
 }

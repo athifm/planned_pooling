@@ -441,10 +441,17 @@
 
       <button type="button" id="prescribe">Suggest swatches</button>
       <div id="prescription"></div>
-    </details>
 
-    <fieldset class="measurePanel" id="measurement">
-      <legend>Measurements</legend>
+      <!-- The second half of the same activity: the list says what to knit,
+           this says what it measured. They were two cards, and only one of
+           them could be put away -- which left the "(2 of 3)" on each line
+           pointing at a list that was no longer on screen.
+
+           Hidden until there are swatches, as before. setFrozen() now also
+           opens this card when that happens, so the boxes cannot be waiting
+           inside a panel that looks shut and empty. -->
+      <div class="group measurePanel" id="measurement">
+        <h3 class="groupHeading">Measurements</h3>
 
       <label class="choice">
         <input type="radio" name="calMethod" value="length" checked>
@@ -492,7 +499,8 @@
       <div id="solution"></div>
       <button type="button" id="applyCalibration">Use these figures</button>
       <p class="hint" id="applyResult"></p>
-    </fieldset>
+      </div>
+    </details>
 
 <details class="panelSection" data-section="display">
       <summary>Display</summary>
