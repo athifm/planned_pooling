@@ -1910,6 +1910,22 @@ pageBox.addEventListener("input", function (e) {
   saveSoon();
 });
 
+// The manual figures are the fallback and calibration is the better answer,
+// but calibration sits in a card of its own further down and nothing pointed
+// at it. Open it, bring it into view, and put the keyboard on the button that
+// starts the work -- so following the offer lands somewhere ready to use
+// rather than merely somewhere scrolled.
+document.getElementById("goCalibration").addEventListener("click", function () {
+  const card = document.getElementById("calibration");
+  card.open = true;
+  // Not smooth: opening the card fires the toggle listener, which redraws the
+  // fabric, and moving focus straight afterwards cancels a scroll still in
+  // flight. Measured -- with behaviour:"smooth" the page had not moved at all
+  // 700ms later. A jump also respects reduced-motion without asking.
+  card.scrollIntoView({ block: "start" });
+  document.getElementById("prescribe").focus({ preventScroll: true });
+});
+
 // Opening a section puts its contents in force, so it is a change like any
 // other. Captured rather than bubbled: a details element's toggle event does
 // not bubble, and capture is what reaches it without a listener per section.
