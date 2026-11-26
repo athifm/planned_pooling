@@ -194,6 +194,12 @@ h1 {
   align-self: center;
 }
 
+/* The readouts describe the fabric; this one changes how much of it you see.
+   Set apart from them so it does not read as another line of output. */
+.viewControl {
+  margin-top: var(--sp-3);
+}
+
 .dimension label {
   font-size: var(--fs-md);
   color: var(--c-ink-muted);

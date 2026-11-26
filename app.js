@@ -113,7 +113,6 @@ const SECTION_NAMES = {
 };
 
 const SECTIONS = [
-  "display",      // zoom
   "turning",      // yarn spent turning at each row end
 
   "calibration",  // measuring your own figures from swatches
@@ -279,7 +278,8 @@ function startPhaseMetres(sequence) {
 // quietly changing the result is the bug this exists to prevent.
 function inEffect() {
   return {
-    zoom: sectionOpen("display") ? num(zoomInput) : DEFAULT_SETTINGS.zoom,
+    // Always in force: it sits beside the fabric and is always on screen.
+    zoom: num(zoomInput),
     // One source now, open or closed: the table holds every stitch's cost, and
     // closing it hides rows rather than switching them off. What keeps the
     // visible-is-in-force rule is that the selected row is always on show, as
@@ -891,7 +891,7 @@ function problems() {
     bad(rowHeightInput, "A row has to have a height.");
   }
 
-  if (sectionOpen("display") && !(num(zoomInput) > 0)) {
+  if (!(num(zoomInput) > 0)) {
     bad(zoomInput, "Needs to be more than zero.");
   }
 

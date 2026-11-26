@@ -221,7 +221,16 @@ function applySettings(s) {
   clampStartOffset();
 
   setControlsWidth(s.controlsWidth);
-  document.getElementById("zoom").value = s.zoom;
+
+  // Zoom used to live in a section that could be closed, and a closed section
+  // kept its value without applying it. Now that the box is always on screen
+  // it is always in force -- so a saved zoom from a session where the section
+  // was shut was never actually in effect, and restoring it would apply a
+  // figure the knitter had put away. Restore what was on screen instead.
+  const zoomWasInForce = !s.openSections || s.openSections.includes("display")
+    || s.zoom === DEFAULT_SETTINGS.zoom;
+  document.getElementById("zoom").value =
+    zoomWasInForce ? s.zoom : DEFAULT_SETTINGS.zoom;
   document.getElementById("useFades").checked = s.useFades;
   document.getElementById("fadeAll").value = s.fadeAll;
   document.getElementById("skeinLength").value = s.skeinLength;
