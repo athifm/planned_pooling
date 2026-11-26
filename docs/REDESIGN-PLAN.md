@@ -206,6 +206,48 @@ One bar, one meaning. Full and red means short. Do not reuse it for anything els
 
 ---
 
+## Phase 10 — Calibration from one repeat
+
+Asked for directly: design the pattern, knit one repeat containing every element
+you will use, unwind it, measure, and have that be enough. Today it is not, and
+the reason is worth writing down rather than rediscovering.
+
+`calibration.js` treats one swatch as one linear equation, and `unknownsFor()`
+counts one unknown per stitch type **plus** `turn`, `castOn` and `bindOff`. Even
+an all-knit flat calibration is four unknowns, and the search will not stop until
+`rankOf(rows) === unknowns.length`. One repeat is one measurement against many
+unknowns, so it cannot separate knit from purl from slipped — and the renderer
+walks the yarn stitch by stitch, so colour placement needs that separation.
+`candidateSwatches()` never offers the knitter's own repeat as a swatch for the
+same reason: mixed swatches do not separate types.
+
+The narrower version is sound. Keep the **ratios** between stitch types as
+currently believed and solve a single **scale factor** from one measured repeat.
+One equation, one unknown. Total yarn becomes exact and colour placement is as
+good as the assumed ratios, which is far better than unscaled defaults.
+
+1. A path that takes the design already on screen, states the repeat to knit, and
+   asks for one measurement.
+2. Solve one multiplier over the current per-type figures. Do not touch
+   `solveCalibration`; this is a different question, not a cheaper version of the
+   same one.
+3. Say plainly what it buys and what it does not: exact total, approximate
+   placement. A knitter choosing this is trading one for the other knowingly.
+4. Decide the edges. The repeat carries a cast-on and, worked flat, turns. Either
+   prescribe it in the round so turning leaves the equation, or fold cast-on and
+   bind-off into the one factor and say so.
+5. `metresPerGram()` already exists, so "weigh it" can stand in for "unwind it".
+
+**Verify:** the fitted factor reproduces the measured repeat exactly; a design
+whose repeat is all one stitch type agrees with what the full solver returns from
+equivalent swatches.
+
+**Placement:** independent of phases 1 to 9. It is the only item here that adds a
+way of using the app rather than restyling one, so it is worth doing early if
+appetite allows.
+
+---
+
 ## Explicitly not adopted
 
 - **Three-column `list | view | settings`.** There is no list of pieces here. The current
